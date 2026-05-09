@@ -2,7 +2,7 @@ import React from 'react';
 import { Product, OrderStatus } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { StatusPipeline } from './StatusPipeline';
-import { MoreHorizontal, Edit2, Trash2, ArrowUpRight, ChevronDown, Check } from 'lucide-react';
+import { MoreHorizontal, Edit2, Trash2, ArrowUpRight, ChevronDown, Check, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ProductCardProps {
@@ -73,15 +73,24 @@ export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange
       )}
     >
       <div className="relative aspect-video bg-brand-bg border-b border-brand-border">
-        <img 
-          src={product.imageUrl || 'https://picsum.photos/seed/placeholder/400/400'} 
-          alt={product.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/400/400';
-          }}
-        />
+        {(() => {
+          const isValidUrl = product.imageUrl && (product.imageUrl.startsWith('http') || product.imageUrl.startsWith('data:'));
+          return isValidUrl ? (
+            <img 
+              src={product.imageUrl} 
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/400/400';
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-brand-bg">
+              <Package className="text-brand-muted/30" size={40} />
+            </div>
+          );
+        })()}
         <div className="absolute top-3 right-3 z-10">
           <motion.button 
             whileHover={{ scale: 1.1 }}

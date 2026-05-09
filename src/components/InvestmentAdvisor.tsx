@@ -14,6 +14,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 
+const parseAmount = (value: any): number => {
+  if (value === null || value === undefined || value === '') return 0;
+  const cleanValue = String(value).replace(/[$,\s]/g, '');
+  const num = parseFloat(cleanValue);
+  return isNaN(num) ? 0 : num;
+};
+
 interface InvestmentAdvisorProps {
   products: Product[];
 }
@@ -158,20 +165,21 @@ export function InvestmentAdvisor({ products }: InvestmentAdvisorProps) {
   };
 
   const handleCalcOperator = (op: string) => {
-    setCalcMemory(parseFloat(calcValue));
+    setCalcMemory(parseAmount(calcValue));
     setCalcOperator(op);
     setCalcValue('0');
   };
 
   const calculate = () => {
     if (calcMemory === null || calcOperator === null) return;
-    const current = parseFloat(calcValue);
+    const current = parseAmount(calcValue);
+    const memory = parseAmount(calcMemory);
     let result = 0;
     switch (calcOperator) {
-      case '+': result = calcMemory + current; break;
-      case '-': result = calcMemory - current; break;
-      case '*': result = calcMemory * current; break;
-      case '/': result = current !== 0 ? calcMemory / current : 0; break;
+      case '+': result = memory + current; break;
+      case '-': result = memory - current; break;
+      case '*': result = memory * current; break;
+      case '/': result = current !== 0 ? memory / current : 0; break;
     }
     setCalcValue(result.toString());
     setCalcMemory(null);

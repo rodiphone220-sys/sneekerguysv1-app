@@ -51,7 +51,7 @@ export function SneekyBot({ settings }: SneekyBotProps) {
         ${settings.aiGeneralPrompt || 'Ayuda al usuario con lo que necesite de manera concisa.'}
         
         Contexto del Usuario:
-        El usuario está navegando por la aplicación StockMaster (Sistema de gestión de inventario y CRM).
+        El usuario está navegando por la aplicación The Sneacker Guys - Sales & Stock Manager (Sistema de gestión de inventario y CRM).
         
         Historial de chat:
         ${messages.map(m => `${m.role}: ${m.text}`).join('\n')}

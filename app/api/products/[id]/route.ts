@@ -21,13 +21,11 @@ const mapProductToRow = (product: any): any[] => {
   const today = new Date().toISOString().split('T')[0];
   const sku = product.sku_manual || product.sku || product.id || '';
   
-  // Limitar imageUrl - si es base64 muy largo, guardar solo "imagen_subida"
+  // Limitar imageUrl - si es base64 muy largo, guardar solo indicador
   let imageLink = product.imageUrl || '';
   if (imageLink.startsWith('data:image')) {
-    // Es base64 - marcar como imagen subida (no guardar el base64 completo)
     imageLink = '📷 Imagen cargada desde dispositivo';
   }
-  // Limitar a 50000 caracteres máximo
   if (imageLink.length > 49000) {
     imageLink = imageLink.substring(0, 49000) + '...';
   }
@@ -42,11 +40,11 @@ const mapProductToRow = (product: any): any[] => {
     product.clientAddress || '', // G: CLIENTE_DIRECCION
     product.referenciado_por || '', // H: REFERENCIADO_POR
     product.metodo_pago_cliente || '', // I: METODO_PAGO_CLIENTE
-    product.name || '', // J: ARTICULO_DETALLE (Modelo/Nombre)
+    product.name || '', // J: ARTICULO_DETALLE
     product.category || '', // K: CATEGORIA
     product.boutique || '', // L: BOUTIQUE_ORIGEN
     imageLink, // M: LINK_CARPETA_IMAGENES
-    product.origen_articulo || product.tipo_compra || '', // N: TIPO_COMPRA (NACIONAL/FRONTERA/USA)
+    product.origen_articulo || product.tipo_compra || '', // N: TIPO_COMPRA
     product.buyPriceUsd || 0, // O: COSTO_USD
     product.exchangeRate || 18, // P: TIPO_CAMBIO
     product.buyPriceMxn || 0, // Q: COSTO_MXN
@@ -78,134 +76,42 @@ const mapProductToRow = (product: any): any[] => {
   ];
 };
 
-const mapRowToProduct = (row: any[], index: number): any => ({
-  id: `${row[0] || `r${index}`}-${index}`,
-  originalId: row[0] || '',
-  sku: row[0] || '',
-  fecha_registro: row[1] || '',
-  numero_pedido: row[2] || '',
-  clientName: row[3] || '',
-  clientEmail: row[4] || '',
-  clientPhone: row[5] || '',
-  clientAddress: row[6] || '',
-  referenciado_por: row[7] || '',
-  metodo_pago_cliente: row[8] || '',
-  name: row[9] || '',
-  category: row[10] || '',
-  boutique: row[11] || '',
-  imageUrl: row[12] || '',
-  tipo_compra: row[13] || '',
-  origen_articulo: row[13] || '',
-  buyPriceUsd: parseSheetNumber(row[14]),
-  exchangeRate: parseSheetNumber(row[15]) || 18,
-  buyPriceMxn: parseSheetNumber(row[16]),
-  sellPriceMxn: parseSheetNumber(row[17]),
-  utilidad_bruta: parseSheetNumber(row[18]),
-  costo_envio_usa: parseSheetNumber(row[19]),
-  estado_envio_usa: row[20] || '',
-  estado_entrega_usa: row[21] || '',
-  ubicacion_actual: row[22] || '',
-  fecha_ingreso_zafiro: row[23] || '',
-  incluido_en_corte_zafiro: row[24] || 'NO',
-  estado_entrega_mx: row[25] || '',
-  fecha_entrega_cliente: row[26] || '',
-  anticipo_abonado: parseSheetNumber(row[27]),
-  total_pagado: parseSheetNumber(row[28]),
-  saldo_pendiente: parseSheetNumber(row[29]),
-  abonado_amex: parseSheetNumber(row[30]),
-  utilidad_tomada: parseSheetNumber(row[31]),
-  revisado_rodrigo: row[32] || 'NO',
-  notes: row[33] || '',
-  currentStatus: row[34] || 'COMPRADO',
-  totalBuyPriceUsd: parseSheetNumber(row[35]),
-  totalBuyPriceMxn: parseSheetNumber(row[36]),
-  brand: row[41] || '', // AO: SUBCATEGORIA
-  size: row[42] || '', // AP: TALLA
-  color_description: row[43] || '', // AQ: COLOR
-  gender: row[44] || '', // AR: TAGS
-  payment_card: row[40] || '', // AN: TARJETA_PAGO
-});
-
-export async function GET() {
-  try {
-    const auth = getAuthClient();
-    if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
-    const sheets = google.sheets('v4');
-    const response = await sheets.spreadsheets.values.get({ auth, spreadsheetId: SHEET_ID, range: "'MASTER_DATA'!A2:AR" });
-    const rows = response.data.values || [];
-    const products = rows.map((row: any[], index: number) => mapRowToProduct(row, index));
-    return Response.json(products);
-  } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function POST(request: Request) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const auth = getAuthClient();
     if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
     
     const body = await request.json();
-    const products = Array.isArray(body) ? body : [body];
-    const sheets = google.sheets('v4');
+    const id = params.id;
     
-    const results = [];
-    for (const product of products) {
-      const row = mapProductToRow(product);
-      const appendResponse = await sheets.spreadsheets.values.append({
-        auth,
-        spreadsheetId: SHEET_ID,
-        range: "'MASTER_DATA'!A:A",
-        valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [row] }
-      });
-      results.push({ success: true, spreadsheetId: appendResponse.data.spreadsheetId });
-    }
-    
-    return Response.json({ success: true, count: results.length, results });
-  } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function PUT(request: Request) {
-  try {
-    const auth = getAuthClient();
-    if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
-    
-    const body = await request.json();
-    const { id, ...productData } = body;
-    
-    // Get current data to find row
     const sheets = google.sheets('v4');
     const getResponse = await sheets.spreadsheets.values.get({ 
       auth, 
       spreadsheetId: SHEET_ID, 
-      range: "'MASTER_DATA'!A2:AN" 
+      range: "'MASTER_DATA'!A2:AR" 
     });
     
     const rows = getResponse.data.values || [];
     let rowIndex = -1;
-    let originalId = id;
     
-    // Find row by ID
+    let searchId = id;
     if (id && id.includes('-')) {
-      originalId = id.split('-')[0];
+      searchId = id.split('-')[0];
     }
     
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] === originalId || rows[i][0] === id) {
-        rowIndex = i + 2; // +2 because row 1 is header, data starts at row 2
+      if (rows[i][0] === searchId || rows[i][0] === id) {
+        rowIndex = i + 2;
         break;
       }
     }
     
     if (rowIndex === -1) {
-      return Response.json({ error: 'Product not found' }, { status: 404 });
+      return Response.json({ error: 'Product not found', searchId }, { status: 404 });
     }
     
-    const row = mapProductToRow(productData);
-    const updateRange = `'MASTER_DATA'!A${rowIndex}:AN`;
+    const row = mapProductToRow(body);
+    const updateRange = `'MASTER_DATA'!A${rowIndex}:AR`;
     
     await sheets.spreadsheets.values.update({
       auth,

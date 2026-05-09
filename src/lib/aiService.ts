@@ -34,7 +34,7 @@ class AIService {
   }
 
   private initGroq() {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY;
     if (apiKey) {
       this.groqApiKey = apiKey as string;
       console.log('[AI] Groq API key configured (using direct fetch)');
@@ -123,7 +123,7 @@ class AIService {
   }
 
   private async chatWithOllama(messages: { role: 'user' | 'assistant' | 'system'; content: string }[]): Promise<string> {
-    const baseUrl = (import.meta.env.VITE_OLLAMA_BASE_URL as string) || 'http://localhost:11434';
+    const baseUrl = process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://localhost:11434';
     console.log('[AI] Calling Ollama at:', baseUrl);
     
     const response = await fetch(`${baseUrl}/api/chat`, {
@@ -146,7 +146,7 @@ class AIService {
 
   private async chatWithGemini(messages: { role: 'user' | 'assistant' | 'system'; content: string }[]): Promise<string> {
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY as string;
+    const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY as string;
     
     if (!apiKey) {
       throw new Error('Gemini API key not configured');

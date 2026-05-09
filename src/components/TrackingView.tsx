@@ -28,7 +28,7 @@ export function TrackingView({ product }: TrackingViewProps) {
             <Package size={24} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tighter uppercase italic">StockMaster Tracking</h1>
+            <h1 className="text-2xl font-black tracking-tighter uppercase italic">The Sneacker Guys - Sales & Stock Manager Tracking</h1>
             <p className="text-[10px] font-bold text-brand-muted uppercase tracking-[0.3em]">Seguimiento de tu pedido en tiempo real</p>
           </div>
         </div>
@@ -130,7 +130,7 @@ export function TrackingView({ product }: TrackingViewProps) {
         </div>
 
         <div className="text-center pt-8">
-           <p className="text-[10px] font-bold text-brand-muted uppercase tracking-[0.2em] mb-4">StockMaster Logistics System v2.0</p>
+           <p className="text-[10px] font-bold text-brand-muted uppercase tracking-[0.2em] mb-4">The Sneacker Guys - Sales & Stock Manager Logistics System v2.0</p>
            <button className="text-[11px] font-black underline underline-offset-4 decoration-2 decoration-brand-accent/30 hover:decoration-brand-accent">
              ¿Necesitas ayuda con tu pedido? Contactar Soporte
            </button>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Bot, 
   MessageSquare, 
@@ -8,7 +8,10 @@ import {
   Sparkles,
   ShieldCheck,
   Zap,
-  Info
+  Info,
+  Copy,
+  Check,
+  Key
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SystemSettings as SettingsType } from '../types';
@@ -17,11 +20,26 @@ import { cn } from '../lib/utils';
 interface SystemSettingsProps {
   settings: SettingsType;
   onUpdateSettings: (settings: SettingsType) => void;
+  user?: any;
 }
 
-export function SystemSettings({ settings, onUpdateSettings }: SystemSettingsProps) {
+export function SystemSettings({ settings, onUpdateSettings, user }: SystemSettingsProps) {
   const [localSettings, setLocalSettings] = React.useState<SettingsType>(settings);
   const [isSaved, setIsSaved] = React.useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const userIdCode = user?.idCode || user?.ID_CODE || null;
+
+  const handleCopyIdCode = async () => {
+    if (!userIdCode) return;
+    try {
+      await navigator.clipboard.writeText(userIdCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const handleSave = () => {
     onUpdateSettings(localSettings);
@@ -52,6 +70,48 @@ export function SystemSettings({ settings, onUpdateSettings }: SystemSettingsPro
           {isSaved ? 'Guardado' : 'Guardar Cambios'}
         </motion.button>
       </div>
+
+      {/* ID de Organización - Tarjeta de identidad */}
+      {user && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-brand-accent/20 rounded-xl flex items-center justify-center">
+                <Key size={24} className="text-brand-accent" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">ID de Organización</p>
+                <div className="flex items-center gap-3">
+                  <code className="text-emerald-400 font-mono text-lg font-bold tracking-wider">
+                    {userIdCode || 'Cargando...'}
+                  </code>
+                  {userIdCode && (
+                    <button
+                      onClick={handleCopyIdCode}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all group"
+                      title="Copiar al portapapeles"
+                    >
+                      {copied ? (
+                        <Check size={14} className="text-green-400" />
+                      ) : (
+                        <Copy size={14} className="text-zinc-400 group-hover:text-white transition-colors" />
+                      )}
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors uppercase">
+                        {copied ? 'Copiado' : 'Copiar'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-accent/10 text-brand-accent text-[10px] font-black uppercase tracking-widest rounded-full">
+                {user?.role || 'USUARIO'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Messenger AI Control */}

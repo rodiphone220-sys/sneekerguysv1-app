@@ -54,6 +54,13 @@ const CARD_TYPES = ['AMEX CORPORATE', 'VISA BUSINESS', 'MASTERCARD BLACK', 'CITI
 // Helper to extract product info via AI (OCR)
 const getRuntimeEnv = () => (window as any).__ENV__ || {};
 
+const parseAmount = (value: any): number => {
+  if (value === null || value === undefined || value === '') return 0;
+  const cleanValue = String(value).replace(/[$,\s]/g, '');
+  const num = parseFloat(cleanValue);
+  return isNaN(num) ? 0 : num;
+};
+
 // Compress image to reduce size
 const compressImage = (base64: string, maxWidth = 400): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -74,7 +81,7 @@ const compressImage = (base64: string, maxWidth = 400): Promise<string> => {
 
 const extractProductFromImage = async (base64Image: string) => {
   const env = getRuntimeEnv();
-  const groqKey = import.meta.env.VITE_GROQ_API_KEY || env.VITE_GROQ_API_KEY || '';
+  const groqKey = process.env.NEXT_PUBLIC_GROQ_API_KEY || env.VITE_GROQ_API_KEY || '';
   
   if (!groqKey) {
     console.error('Missing GROQ_API_KEY');
@@ -249,7 +256,7 @@ export function ProductForm({
   // OCR scanning with AI
   const scanImageWithAI = async (base64Image: string) => {
     const env = getRuntimeEnv();
-    const hasAI = import.meta.env.VITE_GROQ_API_KEY || env.GROQ_API_KEY || import.meta.env.VITE_OLLAMA_URL;
+    const hasAI = process.env.NEXT_PUBLIC_GROQ_API_KEY || env.GROQ_API_KEY || process.env.NEXT_PUBLIC_OLLAMA_URL;
     if (!hasAI) {
       console.error("Missing AI configuration");
       return;
@@ -412,10 +419,11 @@ export function ProductForm({
     c.phone?.includes(customerSearch)
   );
 
-  const globalTotalUsd = items.reduce((sum, item) => sum + (item.quantity * item.buyPriceUsd), 0);
-  const globalTotalMxn = items.reduce((sum, item) => sum + (item.quantity * item.buyPriceMxn), 0);
+  const globalTotalUsd = items.reduce((sum, item) => sum + (parseAmount(item.quantity) * parseAmount(item.buyPriceUsd)), 0);
+  const globalTotalMxn = items.reduce((sum, item) => sum + (parseAmount(item.quantity) * parseAmount(item.buyPriceMxn)), 0);
 
   const handleOCRModalSave = (data: any) => {
+    // Update the item with OCR data
     updateItem(activeItemIndex, {
       category: data.category,
       brand: data.brand,
@@ -423,9 +431,18 @@ export function ProductForm({
       gender: data.gender,
       color_description: data.color_description,
       size: data.size,
-      buyPriceUsd: data.buyPriceUsd,
-      buyPriceMxn: Math.round((data.buyPriceUsd || 0) * (commonData.exchangeRate))
+      buyPriceUsd: data.moneda_compra === 'MXN' ? 0 : data.buyPriceUsd,
+      buyPriceMxn: data.moneda_compra === 'MXN' ? (data.buyPriceUsd || 0) : Math.round((data.buyPriceUsd || 0) * (commonData.exchangeRate))
     });
+    // Update commonData with currency selection
+    if (data.moneda_compra) {
+      const origen = data.moneda_compra === 'MXN' ? 'NACIONAL' : 'USA';
+      setCommonData({
+        ...commonData,
+        moneda_compra: data.moneda_compra,
+        origen_articulo: origen
+      });
+    }
   };
 
   return (
@@ -708,7 +725,6 @@ export function ProductForm({
                           <div className="flex gap-2">
                             {[
                               { id: 'NACIONAL', emoji: '🇲🇽', currency: 'MXN' },
-                              { id: 'FRONTERA', emoji: '🌵', currency: 'MXN' },
                               { id: 'USA', emoji: '🇺🇸', currency: 'USD' }
                             ].map(orig => (
                               <button
@@ -784,8 +800,9 @@ export function ProductForm({
                             <p className="text-xs font-bold text-brand-ink">Subir imagen / Pegar</p>
                             <p className="text-[10px] text-brand-muted font-medium italic text-brand-accent">Ctrl+V para pegar directamente</p>
                           </div>
-                          <label className="px-4 py-2 bg-brand-ink text-white rounded-xl text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-brand-ink/90 transition-all shadow-lg active:scale-95 block">
-                            Seleccionar Archivo
+                          <label className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest cursor-pointer transition-all shadow-lg active:scale-95 w-full">
+                            <Upload size={16} />
+                            Subir Imagen
                             <input type="file" className="hidden" accept="image/*" onChange={e => handleImageUpload(e, activeItemIndex)} />
                           </label>
                         </div>

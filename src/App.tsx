@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Package, 
@@ -35,6 +36,7 @@ import {
   Sun,
   Moon,
   ShoppingCart,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, OrderStatus, CustomerOrder, Customer, Category } from './types';
@@ -70,27 +72,86 @@ const STATUSES = [
 type ViewType = 'visual' | 'excel';
 
 export default function App() {
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [customers, setCustomers] = React.useState<Customer[]>([]);
-  const [customerOrders, setCustomerOrders] = React.useState<CustomerOrder[]>([]);
-  const [categories, setCategories] = React.useState<Category[]>(INITIAL_CATEGORIES);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [activeTab, setActiveTab] = React.useState<ActiveTab>('dashboard');
-  const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
-  const [autoExport, setAutoExport] = React.useState(false);
-  const [globalMarkup, setGlobalMarkup] = React.useState(35); // Default 35% markup
-  const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
-  const [systemSettings, setSystemSettings] = React.useState<SettingsType>(() => {
+  const router = useRouter();
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  // Todos los hooks deben llamarse SIEMPRE en el mismo orden
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [autoExport, setAutoExport] = useState(false);
+  const [globalMarkup, setGlobalMarkup] = useState(35);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [systemSettings, setSystemSettings] = useState<SettingsType>(() => {
     const saved = localStorage.getItem('stockmaster_settings');
     if (saved) return JSON.parse(saved);
     return {
       isAiAssistantEnabled: true,
       isAiPrimaryResponder: true,
-      aiPrimaryPrompt: "Eres un asistente experto en logística para StockMaster. Eres profesional, conciso y directo. Responde siempre de manera corta y precisa. Si no conoces la respuesta, indica que conectarás con un humano.",
-      aiGeneralPrompt: "Asistente inteligente de soporte interno para el equipo técnico de StockMaster.",
-      sneekyBotPrompt: "Eres Sneeky, el bot simpático de StockMaster. Tu estilo es amigable y servicial."
+      aiPrimaryPrompt: "Eres un asistente experto en logística para The Sneacker Guys - Sales & Stock Manager. Eres profesional, conciso y directo. Responde siempre de manera corta y precisa. Si no conoces la respuesta, indica que conectarás con un humano.",
+      aiGeneralPrompt: "Asistente inteligente de soporte interno para el equipo técnico de The Sneacker Guys - Sales & Stock Manager.",
+      sneekyBotPrompt: "Eres Sneeky, el bot simpático de The Sneacker Guys - Sales & Stock Manager. Tu estilo es amigable y servicial."
     };
   });
+  const [viewType, setViewType] = useState<ViewType>('visual');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | undefined>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | 'ALL'>('ALL');
+  const [connectionStatus, setConnectionStatus] = useState<{status: 'idle' | 'testing' | 'ok' | 'error', message: string}>({status: 'idle', message: ''});
+  const [justSynced, setJustSynced] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newSubcategories, setNewSubcategories] = useState('');
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [trackingProduct, setTrackingProduct] = useState<Product | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    const verifyUser = async () => {
+      const storedUser = localStorage.getItem('sneaker_user');
+      
+      if (!storedUser) {
+        router.push('/login');
+        setIsAuthLoading(false);
+        return;
+      }
+      
+      const userData = JSON.parse(storedUser);
+      
+      try {
+        const res = await fetch(`/api/auth?email=${encodeURIComponent(userData.email)}`);
+        const data = await res.json();
+        
+        if (!data.exists) {
+          localStorage.removeItem('sneaker_user');
+          router.push('/registro');
+        } else {
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        setUser(userData);
+        setIsAuthenticated(true);
+      }
+      
+      setIsAuthLoading(false);
+    };
+    
+    verifyUser();
+  }, [router]);
 
   React.useEffect(() => {
     localStorage.setItem('stockmaster_settings', JSON.stringify(systemSettings));
@@ -115,27 +176,6 @@ export default function App() {
       console.error('Failed to sync auto-export setting');
     }
   };
-  const [viewType, setViewType] = React.useState<ViewType>('visual');
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
-  const [isCustomerPortalOpen, setIsCustomerPortalOpen] = React.useState(false);
-  const [editingProduct, setEditingProduct] = React.useState<Product | undefined>();
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatus | 'ALL'>('ALL');
-  const [connectionStatus, setConnectionStatus] = React.useState<{status: 'idle' | 'testing' | 'ok' | 'error', message: string}>({status: 'idle', message: ''});
-  const [justSynced, setJustSynced] = React.useState(false);
-  const [isAddingCategory, setIsAddingCategory] = React.useState(false);
-  const [editingCategory, setEditingCategory] = React.useState<Category | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = React.useState<string | null>(null);
-  const [newCategoryName, setNewCategoryName] = React.useState('');
-  const [newSubcategories, setNewSubcategories] = React.useState('');
-
-  const [collapsedCategories, setCollapsedCategories] = React.useState<Record<string, boolean>>({});
-
-  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
-  const [trackingProduct, setTrackingProduct] = React.useState<Product | null>(null);
-  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Check for tracking URL param
   const trackingId = new URLSearchParams(window.location.search).get('tracking');
@@ -371,8 +411,20 @@ export default function App() {
       STATUS: p.currentStatus,
       NOTAS: p.notes || ''
     }));
-    exportToCSV(exportData, `StockMaster_${activeTab}_${new Date().toISOString().split('T')[0]}`);
+    exportToCSV(exportData, `The Sneacker Guys - Sales & Stock Manager_${activeTab}_${new Date().toISOString().split('T')[0]}`);
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <Loader2 className="animate-spin text-brand-accent" size={40} />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (publicTrackingProduct) {
     return <TrackingView product={publicTrackingProduct} />;
@@ -411,7 +463,7 @@ export default function App() {
             <div className="w-6 h-6 bg-brand-ink rounded flex items-center justify-center">
               <Package size={14} className="text-white" />
             </div>
-            <span className="font-bold text-xl tracking-tight text-brand-ink">StockMaster</span>
+            <span className="font-bold text-xl tracking-tight text-brand-ink">The Sneacker Guys - Sales & Stock Manager</span>
           </div>
 
           <nav className="space-y-1">
@@ -565,7 +617,15 @@ export default function App() {
         </div>
 
         <div className="mt-auto p-6 border-t border-brand-border min-w-[240px]">
-          <button className="flex items-center gap-2 text-sm font-medium text-brand-muted hover:text-brand-ink transition-colors">
+          <button 
+            onClick={() => {
+              localStorage.removeItem('sneaker_user');
+              setIsAuthenticated(false);
+              setUser(null);
+              router.push('/login');
+            }}
+            className="flex items-center gap-2 text-sm font-medium text-brand-muted hover:text-brand-ink transition-colors"
+          >
             <LogOut size={16} /> Salir Sesión
           </button>
         </div>
@@ -717,7 +777,7 @@ export default function App() {
           {!isLoading && activeTab === 'dashboard' && <Dashboard products={products} onNavigate={setActiveTab} />}
           {!isLoading && activeTab === 'advisor' && <InvestmentAdvisor products={products} />}
           {!isLoading && activeTab === 'messaging' && <MessagingView settings={systemSettings} />}
-          {!isLoading && activeTab === 'settings' && <SystemSettings settings={systemSettings} onUpdateSettings={setSystemSettings} />}
+          {!isLoading && activeTab === 'settings' && <SystemSettings settings={systemSettings} onUpdateSettings={setSystemSettings} user={user} />}
           {!isLoading && activeTab === 'finances' && (
             <FinanceView 
               products={products} 
@@ -992,17 +1052,20 @@ export default function App() {
                           <td className="px-4 py-3 font-mono font-bold text-brand-ink">{p.sku}</td>
                           <td className="px-4 py-3">
                             <div className="w-10 h-10 rounded-md border border-brand-border bg-white overflow-hidden flex items-center justify-center">
-                              {p.imageUrl ? (
-                                <img 
-                                  src={p.imageUrl} 
-                                  alt={p.name} 
-                                  className="w-full h-full object-cover"
-                                  referrerPolicy="no-referrer"
-                                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/err/40/40'; }}
-                                />
-                              ) : (
-                                <div className="text-[8px] font-bold text-brand-muted uppercase text-center leading-none">Sin<br/>Foto</div>
-                              )}
+                              {(() => {
+                                  const isValidUrl = p.imageUrl && (p.imageUrl.startsWith('http') || p.imageUrl.startsWith('data:'));
+                                  return isValidUrl ? (
+                                    <img 
+                                      src={p.imageUrl} 
+                                      alt={p.name} 
+                                      className="w-full h-full object-cover"
+                                      referrerPolicy="no-referrer"
+                                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/err/40/40'; }}
+                                    />
+                                  ) : (
+                                    <div className="text-[8px] font-bold text-brand-muted uppercase text-center leading-none">Sin<br/>Foto</div>
+                                  );
+                                })()}
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -1335,7 +1398,7 @@ export default function App() {
                   <Settings size={40} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold mb-2">Ajustes StockMaster Pro</h3>
+                  <h3 className="text-2xl font-bold mb-2">Ajustes The Sneacker Guys - Sales & Stock Manager Pro</h3>
                   <p className="text-brand-muted max-w-xs mx-auto text-sm leading-relaxed">
                     Personaliza reglas de logística, tipo de cambio y gestión de bases de datos.
                   </p>

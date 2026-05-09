@@ -13,6 +13,7 @@ interface OCRData {
   color_description?: string;
   size?: string;
   buyPriceUsd?: number;
+  moneda_compra?: 'USD' | 'MXN';
 }
 
 interface OCRModalProps {
@@ -285,21 +286,70 @@ export function OCRModal({ imageUrl, ocrData, isOpen, onClose, onSave, itemIndex
                   />
                 </div>
 
-                {/* Price */}
+                {/* Currency Selector */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Precio USD</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted font-mono">$</span>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={localData.buyPriceUsd || ''}
-                      onChange={e => handleChange('buyPriceUsd', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-3 bg-white border border-brand-border rounded-xl text-sm font-mono font-bold outline-none focus:border-brand-ink transition-all"
-                    />
+                  <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Tipo de Compra</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleChange('moneda_compra', 'USD')}
+                      className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                        localData.moneda_compra !== 'MXN' 
+                          ? 'bg-blue-600 text-white shadow-lg' 
+                          : 'bg-white border-2 border-brand-border text-brand-muted'
+                      }`}
+                    >
+                      🇺🇸 USD
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleChange('moneda_compra', 'MXN')}
+                      className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                        localData.moneda_compra === 'MXN' 
+                          ? 'bg-green-500 text-white shadow-lg' 
+                          : 'bg-white border-2 border-brand-border text-brand-muted'
+                      }`}
+                    >
+                      🇲🇽 MXN
+                    </button>
                   </div>
                 </div>
+
+                {/* Price - Solo mostrar si es USD */}
+                {localData.moneda_compra !== 'MXN' && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Precio USD</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted font-mono">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={localData.buyPriceUsd || ''}
+                        onChange={e => handleChange('buyPriceUsd', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        className="w-full pl-8 pr-4 py-3 bg-white border border-brand-border rounded-xl text-sm font-mono font-bold outline-none focus:border-brand-ink transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Price MXN - Solo mostrar si es MXN */}
+                {localData.moneda_compra === 'MXN' && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Precio MXN</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted font-mono">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={localData.buyPriceUsd || ''}
+                        onChange={e => handleChange('buyPriceUsd', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        className="w-full pl-8 pr-4 py-3 bg-white border border-brand-border rounded-xl text-sm font-mono font-bold outline-none focus:border-brand-ink transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
