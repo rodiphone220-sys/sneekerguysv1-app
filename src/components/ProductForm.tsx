@@ -61,6 +61,29 @@ const parseAmount = (value: any): number => {
   return isNaN(num) ? 0 : num;
 };
 
+const uploadImageToDrive = async (base64Image: string, productId?: string): Promise<string | null> => {
+  try {
+    const res = await fetch('/api/upload-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        imageBase64: base64Image, 
+        productId: productId || `PROD-${Date.now()}`
+      })
+    });
+    const data = await res.json();
+    console.log('Upload response:', data);
+    if (data.success && data.viewLink) {
+      return data.viewLink;
+    }
+    console.error('Upload failed:', data.error);
+    return null;
+  } catch (error) {
+    console.error('Error uploading to Drive:', error);
+    return null;
+  }
+};
+
 // Compress image to reduce size
 const compressImage = (base64: string, maxWidth = 400): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -305,15 +328,25 @@ export function ProductForm({
 
   // Handling clipboard paste
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") !== -1) {
-            const blob = items[i].getAsFile();
+    const clipboardItems = e.clipboardData.items;
+    for (let i = 0; i < clipboardItems.length; i++) {
+        if (clipboardItems[i].type.indexOf("image") !== -1) {
+            const blob = clipboardItems[i].getAsFile();
             if (blob) {
                 const reader = new FileReader();
                 reader.onload = async (event) => {
-                    const base64 = event.target?.result as string;
-                    updateItem(activeItemIndex, { imageUrl: base64 });
+                    let base64 = event.target?.result as string;
+                    // Comprimir imagen
+                    base64 = await compressImage(base64);
+                    // Subir a Google Drive
+                    const currentItem = items[activeItemIndex];
+                    const productId = currentItem?.sku || `PROD-${Date.now()}`;
+                    const driveUrl = await uploadImageToDrive(base64, productId);
+                    if (driveUrl) {
+                      updateItem(activeItemIndex, { imageUrl: driveUrl });
+                    } else {
+                      updateItem(activeItemIndex, { imageUrl: base64 });
+                    }
                     scanImageWithAI(base64);
                 };
                 reader.readAsDataURL(blob);
@@ -321,7 +354,7 @@ export function ProductForm({
             e.preventDefault();
         }
     }
-  }, [activeItemIndex, commonData.exchangeRate]);
+  }, [activeItemIndex, commonData.exchangeRate, items]);
 
   useEffect(() => {
     window.addEventListener('paste', handlePaste as any);
@@ -379,8 +412,22 @@ export function ProductForm({
     try {
       const reader = new FileReader();
       reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
-        updateItem(idx, { imageUrl: base64 });
+        let base64 = event.target?.result as string;
+        
+        // Comprimir imagen antes de subir
+        base64 = await compressImage(base64);
+        
+        // Subir a Google Drive
+        const productId = items[idx]?.sku || `PROD-${Date.now()}`;
+        const driveUrl = await uploadImageToDrive(base64, productId);
+        
+        // Usar URL de Drive si existe, si no usar base64 local
+        if (driveUrl) {
+          updateItem(idx, { imageUrl: driveUrl });
+        } else {
+          updateItem(idx, { imageUrl: base64 });
+        }
+        
         scanImageWithAI(base64);
       };
       reader.readAsDataURL(file);

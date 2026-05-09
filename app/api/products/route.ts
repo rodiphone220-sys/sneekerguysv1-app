@@ -21,14 +21,16 @@ const mapProductToRow = (product: any): any[] => {
   const today = new Date().toISOString().split('T')[0];
   const sku = product.sku_manual || product.sku || product.id || '';
   
-  // Limitar imageUrl - si es base64 muy largo, guardar solo "imagen_subida"
+  // Manejar imageUrl: preservar URLs de Drive, usar marcador para base64 local
   let imageLink = product.imageUrl || '';
   if (imageLink.startsWith('data:image')) {
-    // Es base64 - marcar como imagen subida (no guardar el base64 completo)
+    // Es base64 local - marcar como imagen subida
     imageLink = '📷 Imagen cargada desde dispositivo';
-  }
-  // Limitar a 50000 caracteres máximo
-  if (imageLink.length > 49000) {
+  } else if (imageLink.includes('drive.google.com')) {
+    // Es URL de Drive - usarla directamente
+    // Ya está lista para mostrar
+  } else if (imageLink.length > 49000) {
+    // Limitar URLs largas
     imageLink = imageLink.substring(0, 49000) + '...';
   }
   
