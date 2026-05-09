@@ -2,17 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --brand-bg: #F4F7F6;
-  --brand-surface: #FFFFFF;
-  --brand-border: #E5E9E8;
-  --brand-ink: #1A1A1A;
-  --brand-muted: #666666;
+  --brand-bg: #f8faf9;
+  --brand-surface: #ffffff;
+  --brand-border: #e5e7eb;
+  --brand-ink: #0a0a0a;
+  --brand-muted: #6b7280;
+  --brand-accent: #ff4d4d;
 }
 
-body { font-family: "Inter", sans-serif; -webkit-font-smoothing: antialiased; }
+.dark {
+  --brand-bg: #121212;
+  --brand-surface: #1e1e1e;
+  --brand-border: #2d2d2d;
+  --brand-ink: #ffffff;
+  --brand-muted: #9ca3af;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--brand-bg);
+}
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+@layer components {
+  .btn-primary {
+    @apply bg-black text-white rounded-lg font-semibold transition-all hover:opacity-90 active:scale-95;
+  }
+  
+  .btn-primary-dark {
+    @apply bg-white text-black rounded-lg font-semibold transition-all hover:opacity-90 active:scale-95;
+  }
+
+  .btn-active {
+    @apply border-l-2 bg-white/10;
+  }
+
+  .btn-hover {
+    @apply hover:bg-white/5;
+  }
+
+  .card-light {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100;
+  }
+
+  .card-dark {
+    @apply bg-[#1e1e1e] rounded-xl shadow-lg border border-gray-800;
+  }
+}

@@ -143,7 +143,7 @@ export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange
                   value={product.currentStatus}
                   onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
                   className={cn(
-                    "pl-2 pr-6 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider outline-none cursor-pointer border border-transparent appearance-none transition-all hover:ring-2 hover:ring-brand-ink/10",
+                    "pl-2 pr-6 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider outline-none cursor-pointer border-2 border-transparent appearance-none transition-all hover:border-brand-ink/20",
                     getStatusStyle(product.currentStatus),
                     justUpdated && "ring-2 ring-brand-accent scale-105"
                   )}
@@ -197,32 +197,32 @@ export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-brand-label font-bold uppercase tracking-wider">Boutique</span>
-            <span className="text-brand-ink font-bold">{product.boutique || 'N/A'}</span>
+            <span className="text-brand-ink font-semibold">{product.boutique || 'N/A'}</span>
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-brand-label font-bold uppercase tracking-wider">Cliente</span>
-            <span className="text-brand-ink font-bold">{product.clientName || 'STOCK DISPONIBLE'}</span>
+            <span className={cn("font-semibold", product.clientName ? "text-brand-accent" : "text-brand-ink")}>{product.clientName || 'STOCK DISPONIBLE'}</span>
           </div>
           
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div>
-              <span className="text-[11px] text-brand-label font-bold uppercase tracking-wider block mb-0.5">Precio Sugerido</span>
-              <span className="text-[18px] font-black text-brand-ink leading-none">
-                ${displayPriceMxn.toLocaleString()} <span className="text-[10px] opacity-40">MXN</span>
+              <span className="text-[10px] text-brand-accent font-bold uppercase tracking-wider block mb-0.5">Precio Venta</span>
+              <span className="text-[22px] font-extrabold text-brand-ink leading-none">
+                ${displayPriceMxn.toLocaleString()} <span className="text-[10px] opacity-50">MXN</span>
               </span>
               {(product.quantity > 1) && (
-                <div className="text-[10px] text-brand-ink font-bold mt-0.5 bg-brand-ink/5 px-1.5 py-0.5 rounded block w-fit">
-                  Total Pedido: ${(displayPriceMxn * product.quantity).toLocaleString()} MXN
+                <div className="text-[10px] text-brand-ink font-semibold mt-0.5 bg-brand-ink/5 px-1.5 py-0.5 rounded block w-fit">
+                  Total: ${(displayPriceMxn * product.quantity).toLocaleString()}
                 </div>
               )}
             </div>
             <div className="text-right">
-              <span className="text-[11px] text-brand-label font-bold uppercase tracking-wider block mb-0.5">Costo Unit.</span>
-              <span className="text-[13px] font-mono font-bold text-brand-muted">
+              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider block mb-0.5">Costo Unit.</span>
+              <span className="text-[14px] font-mono font-semibold text-gray-500">
                 {formatCurrency(product.buyPriceUsd || 0)}
               </span>
-              <div className="text-[10px] text-brand-muted mt-0.5">
-                MXN: $${ (product.buyPriceMxn || 0).toLocaleString() }
+              <div className="text-[11px] text-gray-400 mt-0.5">
+                $¥{(product.buyPriceMxn || 0).toLocaleString()}
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { sendWelcomeEmail } from './emailService';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1yTp-53mSv89l3LALHDlYevqeYk2AqhwUc8CiCBEN7ss';
 
@@ -150,6 +151,14 @@ export async function POST(request: Request) {
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [newUser] }
       });
+      
+      // Enviar correo de bienvenida
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sneaker-guy-app.vercel.app';
+        await sendWelcomeEmail(name, email, newIdCode, appUrl);
+      } catch (emailError) {
+        console.error('Error sending welcome email:', emailError);
+      }
       
       return Response.json({
         success: true,

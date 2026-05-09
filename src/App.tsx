@@ -459,11 +459,11 @@ export default function App() {
         )}
       >
         <div className="p-8 px-6 min-w-[240px]">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-6 h-6 bg-brand-ink rounded flex items-center justify-center">
-              <Package size={14} className="text-white" />
-            </div>
-            <span className="font-bold text-xl tracking-tight text-brand-ink">The Sneacker Guys - Sales & Stock Manager</span>
+          <div className="flex flex-col gap-1 mb-10">
+            <h1 className="font-extrabold text-2xl tracking-tight text-brand-ink leading-tight">
+              The Sneacker <span className="text-brand-accent">Guys</span>
+            </h1>
+            <span className="text-[10px] font-medium text-gray-400 tracking-[0.25em] uppercase">Sales & Stock Manager</span>
           </div>
 
           <nav className="space-y-1">
@@ -636,11 +636,11 @@ export default function App() {
         {/* Header */}
         <header className="px-4 lg:px-10 py-4 lg:min-h-24 flex flex-col lg:flex-row lg:items-center justify-between border-b border-brand-border bg-brand-surface sticky top-0 z-30 gap-4">
             <div className="flex flex-col">
-              <span className="text-[10px] lg:text-[12px] uppercase tracking-widest text-brand-label font-bold mb-1">
+              <span className="text-[10px] lg:text-[11px] uppercase tracking-widest text-gray-500 font-semibold mb-1">
                 {activeTab === 'all' ? 'Inventario Total' : activeTab === 'orders' ? 'Clientes' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
               </span>
               <div className="flex items-center gap-3 lg:gap-4 overflow-x-auto scrollbar-hide">
-                <h1 className="text-20px lg:text-28px font-bold tracking-tight text-brand-ink whitespace-nowrap">
+                <h1 className="text-24px lg:text-32px font-extrabold tracking-tight text-brand-ink whitespace-nowrap">
                    {activeTab === 'all' ? 'Stock Maestro' : activeTab === 'orders' ? 'Órdenes de Cliente' : activeTab === 'finances' ? 'Panel Financiero' : activeTab === 'catalog' ? 'Categorías Globales' : 'Panel de Logística'}
                 </h1>
 
@@ -650,12 +650,12 @@ export default function App() {
                   onClick={loadData}
                   disabled={isLoading}
                   className={cn(
-                    "w-8 h-8 rounded-lg border transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center ml-2",
-                    justSynced ? "bg-green-500 border-green-500 text-white" : "bg-brand-bg border-brand-border text-brand-muted hover:text-brand-ink"
+                    "w-9 h-9 rounded-lg border-2 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center ml-2",
+                    justSynced ? "bg-green-500 border-green-500 text-white" : "bg-white border-gray-200 text-gray-400 hover:text-brand-ink hover:border-brand-ink"
                   )}
                   title="Sincronizar con Google Sheets"
                 >
-                  {justSynced ? <Check size={14} /> : <Activity size={14} className={cn(isLoading && "animate-spin")} />}
+                  {justSynced ? <Check size={16} /> : <RefreshCcw size={16} className={cn(isLoading && "animate-spin")} />}
                 </motion.button>
               </div>
             </div>
@@ -687,31 +687,30 @@ export default function App() {
               )}
 
               <div className="flex items-center gap-2 lg:gap-3 overflow-x-auto py-1 scrollbar-hide">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-bg border border-brand-border rounded-lg mr-2 shrink-0">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg mr-2 shrink-0">
                   <button 
                     onClick={toggleTheme}
-                    className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-brand-muted hover:text-brand-ink transition-colors"
+                    className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-brand-ink transition-colors"
                   >
-                    {theme === 'light' ? <Moon size={12} /> : <Sun size={12} />}
-                    <span>{theme === 'light' ? 'OBSCURO' : 'CLARO'}</span>
+                    {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+                    <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
                   </button>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-bg border border-brand-border rounded-lg mr-2 shrink-0">
-                  <span className={cn("text-[9px] font-black uppercase tracking-widest transition-colors hidden sm:inline", autoExport ? "text-brand-muted" : "text-brand-accent")}>{autoExport ? "ON" : "OFF"}</span>
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg mr-2 shrink-0">
+                  <span className={cn("text-[10px] font-bold uppercase tracking-widest transition-colors", autoExport ? "text-green-600" : "text-gray-400")}>{autoExport ? "● AUTO" : "○ AUTO"}</span>
                   <button 
                     type="button"
                     onClick={toggleAutoExport}
                     className={cn(
-                      "w-8 h-4 rounded-full relative transition-all duration-300",
-                      autoExport ? "bg-brand-ink" : "bg-brand-border"
+                      "w-9 h-5 rounded-full relative transition-all duration-300",
+                      autoExport ? "bg-green-500" : "bg-gray-300"
                     )}
                   >
                     <div className={cn(
-                      "absolute top-0.5 w-3 h-3 rounded-full bg-white dark:bg-brand-bg transition-all duration-300 shadow-sm",
-                      autoExport ? "left-4.5" : "left-0.5"
+                      "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-300 shadow-md",
+                      autoExport ? "left-4" : "left-0.5"
                     )} />
                   </button>
-                  <span className="text-[9px] font-black uppercase tracking-widest text-brand-muted hidden lg:inline">Exportación Automática</span>
                 </div>
 
                 {activeTab !== 'dashboard' && activeTab !== 'settings' && (
@@ -750,7 +749,7 @@ export default function App() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setIsBulkUploadOpen(true)}
-                  className="px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-bold text-xs lg:text-sm tracking-tight flex items-center gap-2 bg-brand-surface text-brand-ink border border-brand-border hover:bg-brand-bg transition-all shadow-sm whitespace-nowrap"
+                  className="px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-xs lg:text-sm tracking-tight flex items-center gap-2 bg-white text-brand-ink border-2 border-brand-ink hover:bg-gray-50 transition-all shadow-sm whitespace-nowrap"
                 >
                   <FileSpreadsheet size={16} /> <span>Subir Masivo</span>
                 </motion.button>
@@ -758,7 +757,7 @@ export default function App() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => { setEditingProduct(undefined); setIsFormOpen(true); }}
-                  className="bg-brand-ink text-brand-bg px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-bold text-xs lg:text-sm tracking-tight flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-black/5 whitespace-nowrap"
+                  className="bg-brand-ink text-white px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-xs lg:text-sm tracking-tight flex items-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-black/20 whitespace-nowrap"
                 >
                   <Plus size={16} /> <span>Nuevo</span>
                 </motion.button>
@@ -891,38 +890,38 @@ export default function App() {
           {!isLoading && (activeTab !== 'dashboard' && activeTab !== 'settings' && activeTab !== 'orders' && activeTab !== 'finances') && (
             <div className="space-y-6">
               {/* Toolbar */}
-              <div className="flex flex-col md:flex-row items-center gap-4 bg-brand-surface p-4 rounded-xl border border-brand-border">
+              <div className="flex flex-col md:flex-row items-center gap-4 bg-brand-surface p-4 rounded-xl border-2 border-brand-border shadow-sm">
                 <div className="relative flex-1 group w-full">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted group-focus-within:text-brand-ink transition-colors" size={16} />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-ink transition-colors" size={18} />
                   <input 
                     type="text" 
-                    placeholder="Buscador inteligente (SKU, Cliente, Marca, Modelo)..." 
+                    placeholder="🔍 Buscador (SKU, Cliente, Marca, Modelo, Categoría)..." 
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full bg-brand-bg border-none rounded-lg py-2.5 pl-12 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink"
+                    className="w-full bg-gray-50 border-2 border-transparent rounded-lg py-3 pl-12 pr-4 focus:border-brand-ink focus:bg-white transition-all outline-none text-sm text-brand-ink placeholder:text-gray-400"
                   />
                 </div>
                 <div className="flex items-center gap-2 w-full md:w-auto h-full flex-wrap justify-end">
                   {activeTab === 'catalog' && (
                     <a 
                       href="#master-categories-config" 
-                      className="flex items-center gap-2 px-4 py-2 bg-brand-accent/5 text-brand-accent rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-brand-accent/10 transition-all border border-brand-accent/20 h-10"
+                      className="flex items-center gap-2 px-4 py-2 bg-brand-accent/5 text-brand-accent rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-brand-accent/10 transition-all border border-brand-accent/20 h-10"
                     >
-                      <ArrowDown size={14} /> Gestionar Categorías
+                      <ArrowDown size={14} /> Gestionar
                     </a>
                   )}
-                  <div className="flex items-center gap-2 bg-brand-bg rounded-lg px-4 h-10 border border-transparent focus-within:border-brand-ink/20 transition-all">
-                    <Filter size={16} className="text-brand-muted" />
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-4 h-10 border-2 border-transparent focus-within:border-brand-ink transition-all">
+                    <Filter size={16} className="text-gray-400" />
                     <select 
                       value={statusFilter}
                       onChange={e => setStatusFilter(e.target.value as any)}
-                      className="bg-transparent border-none outline-none font-bold text-sm min-w-[160px] text-brand-ink"
+                      className="bg-transparent border-none outline-none font-semibold text-sm min-w-[160px] text-brand-ink"
                     >
                       <option value="ALL">Todos los Status</option>
-                      <option value="COMPRADO">📦 Comprado en USA</option>
-                      <option value="EN_RUTA">✈️ En Ruta a Zafi</option>
-                      <option value="EN_BODEGA">📍 Recibido en Zafi</option>
-                      <option value="ENVIADO">🚚 Enviado a México</option>
+                      <option value="COMPRADO">📦 Comprado</option>
+                      <option value="EN_RUTA">✈️ En Ruta</option>
+                      <option value="EN_BODEGA">📍 Zafi</option>
+                      <option value="ENVIADO">🚚 Enviado</option>
                       <option value="ENTREGADO">✅ Entregado</option>
                     </select>
                   </div>
@@ -1541,20 +1540,20 @@ function NavItem({ active, onClick, icon, label, badge }: { active: boolean, onC
       whileTap={{ x: 4, scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all font-bold text-sm",
+        "w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all font-semibold text-sm",
         active 
-          ? "bg-brand-bg text-brand-ink shadow-sm" 
-          : "text-brand-muted hover:bg-brand-bg/50 hover:text-brand-ink"
+          ? "bg-brand-ink text-brand-surface border-l-2 border-l-brand-accent" 
+          : "bg-transparent text-brand-muted hover:bg-brand-border/50 hover:text-brand-ink"
       )}
     >
       <div className="flex items-center gap-3">
-        <span className={cn("transition-colors", active ? "text-brand-ink" : "text-brand-muted")}>{icon}</span>
+        <span className={cn("transition-colors", active ? "text-brand-surface" : "text-brand-muted")}>{icon}</span>
         <span>{label}</span>
       </div>
       {badge !== undefined && (
         <span className={cn(
           "text-[10px] font-bold px-1.5 py-0.5 rounded",
-          active ? "bg-brand-surface text-brand-ink" : "bg-brand-border text-brand-muted"
+          active ? "bg-brand-accent text-white" : "bg-brand-border text-brand-muted"
         )}>
           {badge}
         </span>
