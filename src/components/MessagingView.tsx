@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, User, Search, MessageSquare, Clock, CheckCheck, Bot, Sparkles, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Send, Search, MessageSquare, Clock, CheckCheck, Bot, Sparkles, Loader2, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SystemSettings } from '../types';
 
@@ -19,6 +19,14 @@ interface ChatState {
   lastInteractionTime: number;
 }
 
+interface User {
+  id: string;
+  nombre: string;
+  email: string;
+  rol?: string;
+  activo?: boolean;
+}
+
 interface Chat {
   id: string;
   userName: string;
@@ -28,26 +36,11 @@ interface Chat {
   online: boolean;
 }
 
-const MOCK_CHATS: Chat[] = [
-  { id: '1', userName: 'Admin Master', lastMessage: 'Actualizado el stock de Jordan 1', time: '10:30 AM', unreadCount: 2, online: true },
-  { id: '2', userName: 'Logística Ensenada', lastMessage: 'Recibido el pedido #4592', time: '9:45 AM', unreadCount: 0, online: true },
-  { id: '3', userName: 'Ventas CDMX', lastMessage: '¿Tenemos el SKU 992-B en stock?', time: 'Ayer', unreadCount: 0, online: false },
-  { id: '4', userName: 'Warehouse Zafi', lastMessage: 'Saliendo ruta hacia México', time: 'Lunes', unreadCount: 0, online: true },
-];
-
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  '1': [
-    { id: 'm1', senderId: 'me', senderName: 'Tú', content: 'Hola Admin, ¿puedes revisar el status del pedido de Nike Dunk?', timestamp: '10:15 AM', read: true },
-    { id: 'm2', senderId: '1', senderName: 'Admin Master', content: 'Sí, claro. Ya está en tránsito a Warehouse.', timestamp: '10:20 AM', read: true },
-    { id: 'm3', senderId: '1', senderName: 'Admin Master', content: 'Actualizado el stock de Jordan 1 también.', timestamp: '10:30 AM', read: false },
-  ]
-};
-
-const getAi = async (messages: { role: string; content: string }[], systemPrompt: string, provider: string = 'groq', model: string = 'meta-llama/llama-4-scout-17b-16e-instruct') => {
+const getAi = async (messages: { role: string; content: string }[], systemPrompt: string) => {
   const res = await fetch('/api/ai/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, systemPrompt, provider, model })
+    body: JSON.stringify({ messages, systemPrompt, provider: 'groq', model: 'meta-llama/llama-4-scout-17b-16e-instruct' })
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'AI error');
@@ -55,316 +48,362 @@ const getAi = async (messages: { role: string; content: string }[], systemPrompt
 };
 
 export function MessagingView({ settings }: { settings: SystemSettings }) {
-  const [selectedChat, setSelectedChat] = useState<string>('1');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [allMessages, setAllMessages] = useState<Record<string, Message[]>>(MOCK_MESSAGES);
+  const [allMessages, setAllMessages] = useState<Record<string, Message[]>>({});
   const [chatStates, setChatStates] = useState<Record<string, ChatState>>({});
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{id: string, name: string} | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const messages = allMessages[selectedChat] || [];
-  const activeChat = MOCK_CHATS.find(c => c.id === selectedChat);
+  // Load current user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('sneaker_user');
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser({ id: user.id || user.idCode || 'user', name: user.nombre || 'Usuario' });
+    }
+  }, []);
 
-  // AI Workflow Effect: Professional Farewell Timeout
-  React.useEffect(() => {
-    if (!settings?.isAiAssistantEnabled || !settings?.isAiPrimaryResponder) return;
-
-    const timer = setInterval(() => {
-      const now = Date.now();
-      Object.keys(chatStates).forEach(chatId => {
-        const state = chatStates[chatId];
-        if (state.isWaitingForSatisfaction && now - state.lastInteractionTime > 30000) { // 30 seconds
-          triggerFarewell(chatId);
+  // Load users from Google Sheets
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await fetch('/api/customers');
+        if (res.ok) {
+          const data = await res.json();
+          const users = data.map((u: any, idx: number) => ({
+            id: u.ID_USUARIO || u.id || `USER-${idx}`,
+            nombre: u.NOMBRE || u.name || 'Usuario sin nombre',
+            email: u.EMAIL || u.email || '',
+            rol: u.ROL || u.role || 'USUARIO',
+            activo: u.ACTIVO === 'TRUE'
+          })).filter((u: User) => u.nombre && u.nombre !== 'Usuario sin nombre');
+          setAllUsers(users);
         }
-      });
-    }, 5000);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+    loadUsers();
+  }, []);
 
-    return () => clearInterval(timer);
-  }, [chatStates, settings]);
-
-  const triggerFarewell = async (chatId: string) => {
-    // Clear waiting state to prevent multiple farewells
-    setChatStates(prev => ({
-      ...prev,
-      [chatId]: { ...prev[chatId], isWaitingForSatisfaction: false }
-    }));
-
-    const farewellMsg = "Ha pasado un tiempo sin respuesta, así que daré por terminada nuestra sesión. ¡Que tengas un excelente día! Recuerda que estoy aquí si me necesitas nuevamente.";
-    
-    // Check if last message was already a bot message or if we are still waiting
-    sendBotMessage(farewellMsg, chatId);
+  // Load messages from Sheets
+  const loadMessages = async () => {
+    try {
+      const res = await fetch('/api/messaging');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const grouped: Record<string, Message[]> = {};
+          data.forEach((msg: any) => {
+            const senderId = msg.EMISOR_ID || '';
+            const receiverId = msg.RECEPTOR_ID || '';
+            const chatKey = senderId === currentUser?.id ? receiverId : senderId;
+            if (!grouped[chatKey]) grouped[chatKey] = [];
+            grouped[chatKey].push({
+              id: msg.ID_MENSAJE || msg.id,
+              senderId: senderId,
+              senderName: msg.EMISOR_NOMBRE || 'Usuario',
+              content: msg.MENSAJE || '',
+              timestamp: msg.FECHA || '',
+              read: msg.LEIDO === 'TRUE'
+            });
+          });
+          setAllMessages(grouped);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
   };
 
-  const sendBotMessage = (text: string, chatId: string = selectedChat) => {
+  useEffect(() => {
+    loadMessages();
+    const interval = setInterval(loadMessages, 10000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [allMessages, selectedUserId]);
+
+  // Filter users based on search
+  const filteredUsers = allUsers.filter(user => 
+    !searchQuery || 
+    user.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.rol || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Get messages for selected user
+  const messages = selectedUserId ? (allMessages[selectedUserId] || []) : [];
+  const activeUser = allUsers.find(u => u.id === selectedUserId);
+
+  // Send message function
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedUserId) return;
+
+    const userName = currentUser?.name || 'Usuario';
+    
+    // Save to Google Sheets
+    try {
+      await fetch('/api/messaging', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emisorId: currentUser?.id || 'user',
+          emisorNombre: userName,
+          receptorId: selectedUserId,
+          mensaje: messageText,
+          tipo: 'internal'
+        })
+      });
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+
+    // Add to local state
     const newMessage: Message = {
-      id: Math.random().toString(36).substr(2, 9),
-      senderId: 'ai',
-      senderName: 'Asistente AI',
-      content: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      id: `MSG-${Date.now()}`,
+      senderId: currentUser?.id || 'me',
+      senderName: userName,
+      content: messageText,
+      timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
       read: false
     };
 
-    setAllMessages(prev => ({
-      ...prev,
-      [chatId]: [...(prev[chatId] || []), newMessage]
-    }));
+setAllMessages(prev => {
+        const key = selectedUserId || 'temp';
+        return {
+          ...prev,
+          [key]: [...(prev[key] || []), newMessage]
+        };
+      });
+
+    setMessageText('');
   };
 
-  const handleAiResponse = async (userText: string, chatId: string) => {
+  // AI response handler
+  const handleAiResponse = async (text: string) => {
     if (!settings?.isAiAssistantEnabled) return;
     setIsAiLoading(true);
-
-    const state = chatStates[chatId] || { isFirstMessage: true, isWaitingForSatisfaction: false, lastInteractionTime: Date.now() };
-
     try {
-      const chatMsgs = allMessages[chatId] || [];
-      const history = chatMsgs.map(m => `${m.senderName}: ${m.content}`).join('\n');
-      
-      const prompt = `
-        Brain Config (Instrucciones Primarias):
-        ${settings.aiPrimaryPrompt}
-        
-        Reglas de Interacción:
-        1. Eres un asistente profesional, corto y conciso.
-        2. ${state.isFirstMessage ? "Este es tu PRIMER mensaje. Preséntate brevemente." : ""}
-        3. Ayuda con la consulta del usuario. Si no tienes la respuesta, indícalo educadamente y ofrece contactar con un humano (opción de contactar con soporte interno).
-        4. Al final de tu respuesta SIEMPRE debes incluir EXACTAMENTE: "¿Te puedo ayudar en algo más?" (sin variaciones).
-        
-        Historial:
-        ${history}
-        User: ${userText}
-        
-        Respuesta AI:`;
-
       const response = await getAi(
-        [{ role: 'user', content: prompt }],
-        settings.aiPrimaryPrompt,
-        'groq',
-        'meta-llama/llama-4-scout-17b-16e-instruct'
+        [{ role: 'user', content: text }],
+        settings.aiPrimaryPrompt
       );
-      
-      const text = response || "Lo siento, tuve un problema procesando tu solicitud.";
-      sendBotMessage(text, chatId);
-
-      setChatStates(prev => ({
-        ...prev,
-        [chatId]: {
-          isFirstMessage: false,
-          isWaitingForSatisfaction: true,
-          lastInteractionTime: Date.now()
-        }
-      }));
-
+      const botMsg: Message = {
+        id: `AI-${Date.now()}`,
+        senderId: 'ai',
+        senderName: 'Asistente AI',
+        content: response || 'Lo siento, hubo un error.',
+        timestamp: new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+        read: false
+      };
+      setAllMessages(prev => {
+        const key = selectedUserId || 'temp';
+        return {
+          ...prev,
+          [key]: [...(prev[key] || []), botMsg]
+        };
+      });
     } catch (error) {
-      console.error('AI Response Error:', error);
-      sendBotMessage("Hubo un error en mi sistema. ¿Deseas que te comunique con un asistente humano?", chatId);
+      console.error('AI error:', error);
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  const sendMessage = (text: string = messageText, sender: string = 'me', senderName: string = 'Tú') => {
-    if (!text.trim()) return;
-    
-    const newMessage: Message = {
-      id: Math.random().toString(36).substr(2, 9),
-      senderId: sender,
-      senderName: senderName,
-      content: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      read: false
-    };
-
-    setAllMessages(prev => ({
-      ...prev,
-      [selectedChat]: [...(prev[selectedChat] || []), newMessage]
-    }));
-
-    if (sender === 'me') {
-      setMessageText('');
-      
-      // Update state tracking
-      const isNegative = text.toLowerCase().includes('no') && text.length < 15;
-      
-      if (isNegative && chatStates[selectedChat]?.isWaitingForSatisfaction) {
-        // Professional farewell if user says no
-        setTimeout(() => triggerFarewell(selectedChat), 1000);
-      } else if (settings?.isAiAssistantEnabled && settings?.isAiPrimaryResponder) {
-        // Trigger AI response with delay for realism
-        setTimeout(() => handleAiResponse(text, selectedChat), 1200);
-      }
-    }
-  };
-
-  const askAI = () => {
-    handleAiResponse(messages[messages.length - 1]?.content || "Hola", selectedChat);
-  };
-
   return (
-    <div className="flex h-[calc(100vh-140px)] bg-brand-surface rounded-2xl border border-brand-border overflow-hidden shadow-sm transition-colors duration-300">
-      {/* Sidebar: Chat List */}
+    <div className="flex h-[calc(100vh-140px)] bg-brand-surface rounded-2xl border border-brand-border overflow-hidden shadow-sm">
+      {/* Sidebar: User List */}
       <div className="w-80 border-r border-brand-border flex flex-col bg-brand-bg/50">
         <div className="p-4 border-b border-brand-border">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={14} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input 
               type="text" 
               placeholder="Buscar usuarios..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-brand-bg border-none rounded-xl text-xs outline-none focus:ring-1 focus:ring-brand-ink transition-all text-brand-ink"
+              className="w-full pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-brand-ink transition-colors"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-ink"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
-          {MOCK_CHATS.map(chat => (
-            <button
-              key={chat.id}
-              onClick={() => setSelectedChat(chat.id)}
-              className={cn(
-                "w-full p-4 flex items-center gap-3 transition-colors border-l-4",
-                selectedChat === chat.id ? "bg-brand-surface border-brand-ink shadow-sm" : "bg-transparent border-transparent hover:bg-brand-bg"
-              )}
-            >
-              <div className="relative">
-                <div className="w-10 h-10 bg-brand-ink rounded-full flex items-center justify-center text-white font-bold text-xs">
-                  {chat.userName.substring(0, 2).toUpperCase()}
-                </div>
-                {chat.online && (
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+        <div className="flex-1 overflow-y-auto">
+          {isLoadingUsers ? (
+            <div className="p-8 text-center">
+              <Loader2 className="animate-spin mx-auto text-brand-muted" size={24} />
+              <p className="text-xs text-brand-muted mt-2">Cargando usuarios...</p>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-sm text-brand-muted">No se encontraron usuarios</p>
+            </div>
+          ) : (
+            filteredUsers.map(user => (
+              <button
+                key={user.id}
+                onClick={() => setSelectedUserId(user.id)}
+                className={cn(
+                  "w-full p-4 flex items-center gap-3 transition-all border-l-4",
+                  selectedUserId === user.id 
+                    ? "bg-brand-ink border-l-brand-accent" 
+                    : "bg-transparent border-l-transparent hover:bg-brand-border/30"
                 )}
-              </div>
-              <div className="flex-1 text-left">
-                <div className="flex justify-between items-center mb-0.5">
-                  <span className="font-bold text-xs text-brand-ink">{chat.userName}</span>
-                  <span className="text-[10px] text-brand-muted">{chat.time}</span>
+              >
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs",
+                  selectedUserId === user.id ? "bg-brand-surface text-brand-ink" : "bg-brand-ink text-white"
+                )}>
+                  {user.nombre.substring(0, 2).toUpperCase()}
                 </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-[11px] text-brand-muted line-clamp-1">{chat.lastMessage}</p>
-                  {chat.unreadCount > 0 && (
-                    <span className="w-5 h-5 bg-brand-ink text-white rounded-full flex items-center justify-center text-[9px] font-black">
-                      {chat.unreadCount}
+                <div className="flex-1 text-left">
+                  <div className="flex justify-between items-center">
+                    <span className={cn(
+                      "font-semibold text-xs",
+                      selectedUserId === user.id ? "text-white" : "text-brand-ink"
+                    )}>
+                      {user.nombre}
                     </span>
-                  )}
+                    {user.activo && selectedUserId !== user.id && (
+                      <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-[10px]",
+                    selectedUserId === user.id ? "text-gray-400" : "text-brand-muted"
+                  )}>
+                    {user.rol || 'Usuario'}
+                  </span>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-brand-bg transition-colors duration-300">
-        {activeChat ? (
+      <div className="flex-1 flex flex-col bg-brand-bg">
+        {!selectedUserId ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-20 h-20 bg-brand-surface rounded-full flex items-center justify-center mb-6 border border-brand-border">
+              <MessageSquare size={32} className="text-brand-muted" />
+            </div>
+            <h3 className="text-lg font-bold text-brand-ink mb-2">Selecciona un usuario</h3>
+            <p className="text-sm text-brand-muted max-w-xs">
+              Elige una conversación de la lista para comenzar a enviar mensajes internos.
+            </p>
+          </div>
+        ) : (
           <>
             {/* Header */}
             <div className="p-4 bg-brand-surface border-b border-brand-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-brand-ink rounded-full flex items-center justify-center text-brand-bg font-bold text-[10px]">
-                  {activeChat.userName.substring(0, 2).toUpperCase()}
+                  {activeUser?.nombre.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-bold text-xs text-brand-ink">{activeChat.userName}</h3>
-                  <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">
-                    {activeChat.online ? 'En línea ahora' : 'Desconectado'}
-                  </p>
+                  <h3 className="font-bold text-xs text-brand-ink">{activeUser?.nombre}</h3>
+                  <p className="text-[9px] text-green-500 font-bold uppercase">En línea</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <motion.button 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={askAI}
-                  disabled={isAiLoading}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-brand-ink text-brand-bg rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-black/10 disabled:opacity-50"
-                >
-                  {isAiLoading ? <Loader2 size={12} className="animate-spin text-brand-bg" /> : <Sparkles size={12} className="text-yellow-400" />}
-                  Consultar AI
-                </motion.button>
-                <button className="p-2 hover:bg-brand-bg rounded-lg transition-colors text-brand-muted">
-                  <Clock size={16} />
-                </button>
-              </div>
+              <button 
+                onClick={() => setSelectedUserId(null)}
+                className="text-brand-muted hover:text-brand-ink"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="flex justify-center mb-8">
-                <span className="px-3 py-1 bg-brand-surface border border-brand-border rounded-full text-[9px] font-bold text-brand-muted uppercase tracking-widest">
-                  Hoy
-                </span>
-              </div>
-              
-              {messages.map(msg => (
-                <div 
-                  key={msg.id} 
-                  className={cn(
-                    "flex flex-col max-w-[70%]",
-                    msg.senderId === 'me' ? "ml-auto items-end" : "mr-auto items-start"
-                  )}
-                >
-                  {msg.senderId === 'ai' && (
-                    <div className="flex items-center gap-1.5 mb-1 px-1">
-                      <Bot size={10} className="text-brand-accent" />
-                      <span className="text-[8px] font-black uppercase tracking-widest text-brand-accent">Asistente AI</span>
-                    </div>
-                  )}
-                  <div className={cn(
-                    "p-3 rounded-2xl text-[11px] font-medium leading-relaxed shadow-sm",
-                    msg.senderId === 'me' 
-                      ? "bg-brand-ink text-brand-bg rounded-tr-none" 
-                      : msg.senderId === 'ai'
-                        ? "bg-brand-accent/10 text-brand-ink border border-brand-accent/20 rounded-tl-none italic"
-                        : "bg-brand-surface text-brand-ink border border-brand-border rounded-tl-none"
-                  )}>
-                    {msg.content}
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5 px-1">
-                    <span className="text-[9px] text-brand-muted font-bold">{msg.timestamp}</span>
-                    {msg.senderId === 'me' && (
-                      <CheckCheck size={12} className={cn(msg.read ? "text-blue-500" : "text-brand-muted")} />
-                    )}
-                  </div>
+              {messages.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-brand-muted italic">No hay mensajes aún. ¡Inicia la conversación!</p>
                 </div>
-              ))}
+              ) : (
+                messages.map(msg => {
+                  const isMine = msg.senderId === currentUser?.id || msg.senderId === 'me';
+                  return (
+                    <div 
+                      key={msg.id}
+                      className={cn(
+                        "flex flex-col max-w-[70%]",
+                        isMine ? "ml-auto items-end" : "mr-auto items-start"
+                      )}
+                    >
+                      {msg.senderId === 'ai' && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Bot size={10} className="text-brand-accent" />
+                          <span className="text-[8px] font-bold uppercase text-brand-accent">AI</span>
+                        </div>
+                      )}
+                      <div className={cn(
+                        "p-3 rounded-2xl text-[11px] font-medium",
+                        isMine 
+                          ? "bg-brand-ink text-brand-bg rounded-tr-none" 
+                          : msg.senderId === 'ai'
+                            ? "bg-brand-accent/10 text-brand-ink border border-brand-accent/20 rounded-tl-none italic"
+                            : "bg-brand-surface text-brand-ink border border-brand-border rounded-tl-none"
+                      )}>
+                        {msg.content}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className="text-[9px] text-brand-muted">{msg.timestamp}</span>
+                        {isMine && (
+                          <CheckCheck size={12} className={msg.read ? "text-blue-500" : "text-brand-muted"} />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Footer: Input */}
+            {/* Input */}
             <div className="p-4 bg-brand-surface border-t border-brand-border">
               <div className="flex items-center gap-2">
-                <div className="flex-1 relative">
-                  <input 
-                    type="text" 
-                    value={messageText}
-                    onChange={e => setMessageText(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && sendMessage()}
-                    placeholder="Escribe un mensaje interno..."
-                    className="w-full px-5 py-3 bg-brand-bg border-none rounded-2xl text-xs outline-none focus:ring-1 focus:ring-brand-ink transition-all text-brand-ink"
-                  />
-                  <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-brand-muted hover:text-brand-ink transition-colors">
-                    <MessageSquare size={16} />
-                  </button>
-                </div>
+                <input 
+                  type="text"
+                  value={messageText}
+                  onChange={e => setMessageText(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Escribe un mensaje interno..."
+                  className="flex-1 px-4 py-3 bg-brand-bg border-none rounded-2xl text-sm outline-none focus:ring-2 focus:ring-brand-ink"
+                />
                 <motion.button 
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => sendMessage()}
-                  className="w-10 h-10 bg-brand-ink text-brand-bg rounded-xl flex items-center justify-center shadow-lg shadow-black/10 hover:scale-105 transition-transform"
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim() || !selectedUserId}
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                    messageText.trim() && selectedUserId
+                      ? "bg-brand-ink text-brand-bg shadow-lg" 
+                      : "bg-brand-border text-brand-muted"
+                  )}
                 >
                   <Send size={16} />
                 </motion.button>
               </div>
             </div>
           </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4 border border-brand-border">
-              <MessageSquare size={32} className="text-brand-border" />
-            </div>
-            <h3 className="font-bold text-brand-ink mb-1">Mensajería Interna</h3>
-            <p className="text-xs text-brand-muted max-w-[240px]">Selecciona un usuario del panel izquierdo para comenzar una conversación.</p>
-          </div>
         )}
       </div>
     </div>
