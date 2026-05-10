@@ -207,7 +207,7 @@ export async function POST(req: Request) {
   }
 }
 
-function parseSheetMessages(rows: any[]) {
+function parseSheetMessages(rows: any[], usersMap: Record<string, {nombre: string, rol: string}>, customersMap: Record<string, string>) {
   if (rows.length < 2) return [];
   
   const headers = rows[0].map((h: string) => h?.toLowerCase().trim() || '');
@@ -229,18 +229,18 @@ function parseSheetMessages(rows: any[]) {
     const receptorId = getCol('receptor_id');
     
     // PRIORITY: USUARIOS (internal team) first
-    const emisorUser = usersMap[emisorId];
-    const receptorUser = usersMap[receptorId];
+    const emisorUser = usersMap[emisorId] || {nombre: '', rol: ''};
+    const receptorUser = usersMap[receptorId] || {nombre: '', rol: ''};
     
     return {
       ID_MENSAJE: getCol('id_mensaje') || getCol('id') || '',
       FECHA: getCol('fecha') || '',
       EMISOR_ID: emisorId,
-      EMISOR_NOMBRE: emisorUser?.nombre || getCol('emisor_nombre') || emisorId,
-      EMISOR_ROL: emisorUser?.rol || '',
+      EMISOR_NOMBRE: emisorUser.nombre || getCol('emisor_nombre') || emisorId,
+      EMISOR_ROL: emisorUser.rol || '',
       RECEPTOR_ID: receptorId,
-      RECEPTOR_NOMBRE: receptorUser?.nombre || getCol('receptor_nombre') || receptorId,
-      RECEPTOR_ROL: receptorUser?.rol || '',
+      RECEPTOR_NOMBRE: receptorUser.nombre || getCol('receptor_nombre') || customersMap[receptorId] || receptorId,
+      RECEPTOR_ROL: receptorUser.rol || '',
       MENSAJE: getCol('mensaje') || getCol('message') || '',
       LEIDO: getCol('leido') || getCol('leido') || 'FALSE',
       TIPO: getCol('tipo') || getCol('type') || 'internal',
@@ -280,7 +280,7 @@ export async function GET(req: Request) {
 
       const rows = response.data.values || [];
       if (rows.length < 2) {
-        const emptyData = [];
+        const emptyData: any[] = [];
         messageCache = { data: emptyData, timestamp: now };
         return Response.json(emptyData);
       }
