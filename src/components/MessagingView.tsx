@@ -57,7 +57,7 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
   const [chatStates, setChatStates] = useState<Record<string, ChatState>>({});
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [currentUser, setCurrentUser] = useState<{id: string, name: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{id: string, name: string, email?: string} | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load current user from localStorage
@@ -65,7 +65,7 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
     const storedUser = localStorage.getItem('sneaker_user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      setCurrentUser({ id: user.id || user.idCode || 'user', name: user.nombre || 'Usuario' });
+      setCurrentUser({ id: user.id || user.idCode || 'user', name: user.nombre || user.name || 'Usuario', email: user.email });
     }
   }, []);
 
@@ -174,10 +174,11 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
 
   // Filter users based on search
   const filteredUsers = allUsers.filter(user => 
-    user.id !== currentUser?.id && (
+    user.id !== currentUser?.id && user.email !== currentUser?.email && (
     !searchQuery || 
     user.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (user.rol || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (user.rol || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
   ));
 
   // Get messages for selected user
