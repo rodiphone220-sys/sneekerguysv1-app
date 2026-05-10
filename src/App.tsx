@@ -638,6 +638,15 @@ export default function App() {
         </div>
 
         <div className="mt-auto p-6 border-t border-brand-border min-w-[240px]">
+          <div className="flex items-center gap-3 mb-4 px-2 py-2 bg-brand-ink/10 rounded-lg">
+            <div className="w-8 h-8 bg-brand-ink rounded-full flex items-center justify-center text-brand-bg font-bold text-[10px]">
+              {(user?.nombre || user?.name || 'U').substring(0, 2).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-brand-ink truncate">{user?.nombre || user?.name || 'Usuario'}</p>
+              <p className="text-[9px] text-brand-muted truncate">{user?.rol || user?.role || 'Usuario'}</p>
+            </div>
+          </div>
           <button 
             onClick={() => {
               localStorage.removeItem('sneaker_user');
@@ -708,6 +717,9 @@ export default function App() {
               )}
 
               <div className="flex items-center gap-2 lg:gap-3 overflow-x-auto py-1 scrollbar-hide">
+                <div className="flex items-center gap-2 px-3 py-2 bg-brand-ink rounded-lg mr-2 shrink-0">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-brand-bg/80">{(user?.nombre || user?.name || 'Usuario').split(' ')[0]}</span>
+                </div>
                 <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg mr-2 shrink-0">
                   <button 
                     onClick={toggleTheme}

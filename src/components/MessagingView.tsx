@@ -174,10 +174,11 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
 
   // Filter users based on search
   const filteredUsers = allUsers.filter(user => 
+    user.id !== currentUser?.id && (
     !searchQuery || 
     user.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (user.rol || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ));
 
   // Get messages for selected user
   const messages = selectedUserId ? (allMessages[selectedUserId] || []) : [];
