@@ -23,6 +23,27 @@ export function SneekyBot({ settings }: SneekyBotProps) {
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const chatEndRef = React.useRef<HTMLDivElement>(null);
+  const [position, setPosition] = React.useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = React.useState(false);
+  const dragStartRef = React.useRef({ x: 0, y: 0 });
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+  };
+
+  const handleDragMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStartRef.current.x,
+        y: e.clientY - dragStartRef.current.y
+      });
+    }
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,17 +127,24 @@ export function SneekyBot({ settings }: SneekyBotProps) {
         </div>
       </motion.button>
 
-      {/* Chat Window */}
+{/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 w-[350px] h-[500px] bg-brand-surface rounded-2xl border border-brand-border shadow-2xl z-[101] flex flex-col overflow-hidden transition-colors duration-300"
+            style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+            className="fixed bottom-6 right-6 w-[350px] h-[500px] bg-brand-surface rounded-2xl border border-brand-border shadow-2xl z-[9999] flex flex-col overflow-hidden transition-colors duration-300"
+            onMouseMove={handleDragMove}
+            onMouseUp={handleDragEnd}
+            onMouseLeave={handleDragEnd}
           >
-            {/* Header */}
-            <div className="p-4 bg-brand-ink text-brand-bg flex items-center justify-between">
+            {/* Header - Draggable */}
+            <div 
+              className="p-4 bg-brand-ink text-brand-bg flex items-center justify-between cursor-move select-none"
+              onMouseDown={handleDragStart}
+            >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-brand-bg rounded-full flex items-center justify-center text-brand-ink">
                   <Bot size={18} />

@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Configuración de Google Sheets incompleta' }, { status: 500 });
     }
 
-    const { emisorId, emisorNombre, receptorId, mensaje, tipo } = await req.json();
+    const { emisorId, emisorNombre, receptorId, mensaje, tipo } = body;
     const sheets = google.sheets({ version: 'v4', auth: authClient });
 
     const newId = `MSG-${Date.now()}`;
@@ -89,9 +89,9 @@ export async function POST(req: Request) {
     });
 
     return Response.json({ success: true, id: newId });
-  } catch (error) {
-    console.error('Error posting message:', error);
-    return Response.json({ error: 'Error al enviar mensaje' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error posting message:', error?.message || error);
+    return Response.json({ error: error?.message || 'Error al enviar mensaje' }, { status: 500 });
   }
 }
 

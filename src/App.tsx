@@ -114,6 +114,7 @@ export default function App() {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newSubcategories, setNewSubcategories] = useState('');
+  const [messagingUnreadCount, setMessagingUnreadCount] = useState(0);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [trackingProduct, setTrackingProduct] = useState<Product | null>(null);
@@ -285,8 +286,27 @@ export default function App() {
     }
   };
 
+  const loadMessagingUnread = async () => {
+    try {
+      const res = await fetch('/api/messaging');
+      if (res.ok) {
+        const data = await res.json();
+        const userStr = localStorage.getItem('sneaker_user');
+        const currentUser = userStr ? JSON.parse(userStr) : null;
+        const userId = currentUser?.id || currentUser?.idCode;
+        if (userId && Array.isArray(data)) {
+          const unread = data.filter((m: any) => m.RECEPTOR_ID === userId && m.LEIDO !== 'TRUE').length;
+          setMessagingUnreadCount(unread);
+        }
+      }
+    } catch (e) { console.error(e); }
+  };
+
   React.useEffect(() => {
     loadData();
+    loadMessagingUnread();
+    const interval = setInterval(loadMessagingUnread, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredProducts = React.useMemo(() => {
@@ -597,6 +617,7 @@ export default function App() {
               onClick={() => { setActiveTab('messaging'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
               icon={<MessageSquare size={18} />} 
               label="Mensajería" 
+              badge={messagingUnreadCount > 0 ? messagingUnreadCount : undefined}
             />
             <div className="mt-6 pt-6 border-t border-brand-border">
               <button 
@@ -1546,15 +1567,17 @@ function NavItem({ active, onClick, icon, label, badge }: { active: boolean, onC
           : "bg-transparent text-brand-muted hover:bg-brand-border/50 hover:text-brand-ink"
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 relative">
         <span className={cn("transition-colors", active ? "text-brand-surface" : "text-brand-muted")}>{icon}</span>
         <span>{label}</span>
+        {badge !== undefined && (
+          <span className="absolute -top-1 -left-1 w-4 h-4 bg-[#E11D48] text-white rounded-full flex items-center justify-center text-[9px] font-bold z-50">
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
       </div>
-      {badge !== undefined && (
-        <span className={cn(
-          "text-[10px] font-bold px-1.5 py-0.5 rounded",
-          active ? "bg-brand-accent text-white" : "bg-brand-border text-brand-muted"
-        )}>
+      {badge !== undefined && !active && (
+        <span className="bg-[#E11D48] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
           {badge}
         </span>
       )}

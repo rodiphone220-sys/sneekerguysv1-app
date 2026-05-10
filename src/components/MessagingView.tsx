@@ -185,13 +185,17 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
 
   // Send message function
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedUserId) return;
+    if (!messageText.trim() || !selectedUserId || !currentUser?.id) return;
+    if (!allUsers.find(u => u.id === selectedUserId)) {
+      console.error('Invalid recipient');
+      return;
+    }
 
     const userName = currentUser?.name || 'Usuario';
     
     // Save to Google Sheets
     try {
-      await fetch('/api/messaging', {
+      const res = await fetch('/api/messaging', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -202,6 +206,10 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
           tipo: 'internal'
         })
       });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Send error:', err);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     }
