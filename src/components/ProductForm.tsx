@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Customer } from '../types';
-import { cn } from '../lib/utils';
+import { cn, getProxyImageUrl } from '../lib/utils';
 import { OCRModal } from './OCRModal';
 
 interface ProductFormProps {
@@ -719,9 +719,10 @@ export function ProductForm({
                         >
                           {item.imageUrl ? (
                             <img 
-                              src={item.imageUrl} 
+                              src={getProxyImageUrl(item.imageUrl)} 
                               alt="" 
                               className="w-10 h-10 rounded-md object-cover border border-white/20"
+                              crossOrigin="anonymous"
                             />
                           ) : (
                             <div className="w-10 h-10 rounded-md bg-gray-200 flex items-center justify-center">
@@ -815,9 +816,10 @@ export function ProductForm({
                           }}
                         >
                           <img 
-                            src={currentItem.imageUrl} 
+                            src={getProxyImageUrl(currentItem.imageUrl)} 
                             alt="Product preview" 
                             className="w-full h-full object-contain p-2 cursor-zoom-in"
+                            crossOrigin="anonymous"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
                             <div className="p-3 rounded-full bg-white/90 text-brand-ink shadow-lg opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 transform cursor-zoom-in">

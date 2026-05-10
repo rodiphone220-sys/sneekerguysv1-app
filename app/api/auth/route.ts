@@ -182,15 +182,12 @@ export async function POST(request: Request) {
   }
 }
 
-// GET - Verificar si email existe
+// GET - Verificar si email existe o listar usuarios
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
-    
-    if (!email) {
-      return Response.json({ error: 'Email requerido' }, { status: 400 });
-    }
+    const listAll = searchParams.get('all') === 'true';
     
     const auth = getAuthClient();
     if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
@@ -203,6 +200,25 @@ export async function GET(request: Request) {
     });
     
     const rows = response.data.values || [];
+    
+    // Si pide listar todos los usuarios
+    if (listAll) {
+      const headers = ['ID_USUARIO', 'NOMBRE', 'EMAIL', 'ROL', 'ACTIVO'];
+      const users = rows.map((row: any[]) => ({
+        id: row[0] || '',
+        nombre: row[1] || '',
+        email: row[2] || '',
+        rol: row[3] || '',
+        activo: row[4] === 'TRUE'
+      })).filter((u: any) => u.nombre);
+      return Response.json(users);
+    }
+    
+    // Verificar si email existe
+    if (!email) {
+      return Response.json({ error: 'Email o parámetro "all" requerido' }, { status: 400 });
+    }
+    
     const user = rows.find((row: any[]) => row[3]?.toLowerCase() === email.toLowerCase());
     
     if (user) {

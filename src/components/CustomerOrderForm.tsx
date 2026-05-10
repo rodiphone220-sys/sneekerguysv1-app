@@ -19,7 +19,7 @@ import {
   Info,
   Clock
 } from 'lucide-react';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getProxyImageUrl } from '../lib/utils';
 
 interface CustomerOrderFormProps {
   availableProducts: Product[];
@@ -630,12 +630,13 @@ export function CustomerOrderForm({ availableProducts, masterCategories = [], gl
                               >
                                 <div className="aspect-[4/5] relative overflow-hidden bg-black">
                                   <img 
-                                    src={p.imageUrl || 'https://picsum.photos/seed/placeholder/600/800'} 
+                                    src={getProxyImageUrl(p.imageUrl) || 'https://picsum.photos/seed/placeholder/600/800'} 
                                     alt={p.name} 
                                     className={cn(
                                       "w-full h-full object-cover transition-all duration-[1.5s] ease-out group-hover/card:scale-110",
                                       isSelectedForActive ? "opacity-90 blur-[2px]" : "opacity-80 group-hover/card:opacity-100"
                                     )}
+                                    crossOrigin="anonymous"
                                     referrerPolicy="no-referrer"
                                   />
                                   <div className={cn(

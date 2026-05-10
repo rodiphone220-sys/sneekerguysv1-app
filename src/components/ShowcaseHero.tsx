@@ -22,6 +22,7 @@ export function ShowcaseHero() {
           alt="hero"
           className="mx-auto rounded-2xl object-cover h-full object-center"
           draggable={false}
+          crossOrigin="anonymous"
           referrerPolicy="no-referrer"
         />
       </ContainerScroll>

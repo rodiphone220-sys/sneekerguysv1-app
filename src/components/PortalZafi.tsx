@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Package, Truck, AlertTriangle, Check, X, Search, Eye, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product } from '../types';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getProxyImageUrl } from '../lib/utils';
 
 interface PortalZafiProps {
   products: Product[];
@@ -187,7 +187,7 @@ export function PortalZafi({ products, onShipProducts, onReportIncident, isLoadi
                     <td className="px-4 py-3">
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-brand-bg">
                         {product.imageUrl ? (
-                          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <img src={getProxyImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" crossOrigin="anonymous" referrerPolicy="no-referrer" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
                             <Package size={20} className="text-brand-muted" />

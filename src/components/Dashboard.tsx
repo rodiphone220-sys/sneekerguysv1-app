@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Product, DashboardStats, OrderStatus } from '../types';
 import { formatCurrency, cn } from '../lib/utils';
 import { 
@@ -11,9 +11,10 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
-import { Package, AlertTriangle, DollarSign, Activity } from 'lucide-react';
+import { Package, AlertTriangle, DollarSign, ShoppingBag, Edit2, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface DashboardProps {
@@ -21,27 +22,27 @@ interface DashboardProps {
   onNavigate: (tab: any) => void;
 }
 
-const COLORS = ['#000000', '#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
+const STATUS_COLORS: Record<string, string> = {
+  COMPRADO: '#3B82F6',
+  EN_RUTA: '#F59E0B', 
+  EN_BODEGA: '#F97316',
+  ENVIADO: '#8B5CF6',
+  ENTREGADO: '#22C55E'
+};
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  COMPRADO: 'Comprado USA',
+  EN_RUTA: 'En Ruta',
+  EN_BODEGA: 'En Zafi',
+  ENVIADO: 'Enviado MX',
+  ENTREGADO: 'Entregado'
+};
 
 export function Dashboard({ products, onNavigate }: DashboardProps) {
-  const pieContainerRef = React.useRef<HTMLDivElement>(null);
-  const barContainerRef = React.useRef<HTMLDivElement>(null);
-  const [canRenderCharts, setCanRenderCharts] = React.useState(true);
+  const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
-    const checkDims = () => {
-      if (pieContainerRef.current && barContainerRef.current) {
-        const pieW = pieContainerRef.current.offsetWidth;
-        const barW = barContainerRef.current.offsetWidth;
-        setCanRenderCharts(pieW > 0 && barW > 0);
-      }
-    };
-    checkDims();
-    const t = setTimeout(checkDims, 300);
-    const ro = new ResizeObserver(checkDims);
-    if (pieContainerRef.current) ro.observe(pieContainerRef.current);
-    if (barContainerRef.current) ro.observe(barContainerRef.current);
-    return () => { ro.disconnect(); clearTimeout(t); };
+    setIsMounted(true);
   }, []);
 
   const stats: DashboardStats = React.useMemo(() => {
@@ -69,165 +70,326 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
     return s;
   }, [products]);
 
-  const statusLabelMap: Record<OrderStatus, string> = {
-    COMPRADO: '📦 Comprado',
-    EN_RUTA: '✈️ En Ruta',
-    EN_BODEGA: '📍 En Zafi',
-    ENVIADO: '🚚 Enviado MX',
-    ENTREGADO: '✅ Entregado'
-  };
+  const statusData = Object.entries(stats.statusCounts)
+    .filter(([_, value]) => value > 0)
+    .map(([name, value]) => ({
+      name: STATUS_LABELS[name as OrderStatus],
+      value,
+      color: STATUS_COLORS[name]
+    }));
 
-  const statusData = Object.entries(stats.statusCounts).map(([name, value]) => ({ 
-    name: statusLabelMap[name as OrderStatus], 
-    value 
-  }));
+  const totalStatus = statusData.reduce((acc, item) => acc + item.value, 0);
+
   const stockData = products
-    .sort((a, b) => b.quantity - a.quantity)
+    .sort((a, b) => (b.quantity || 0) - (a.quantity || 0))
     .slice(0, 8)
-    .map(p => ({ name: p.name.split(' ')[0], stock: p.quantity }));
+    .map(p => ({
+      name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
+      fullName: p.name,
+      stock: p.quantity || 0,
+      minStock: p.minStock || 1,
+      brand: p.brand,
+      id: p.id
+    }));
 
-  const hasStatusData = statusData.length > 0 && statusData.some(s => s.value > 0);
-  const hasStockData = stockData.length > 0 && stockData.some(s => s.stock > 0);
+  const lowStockProducts = products
+    .filter(p => (p.quantity || 0) <= (p.minStock || 1) && (p.quantity || 0) > 0)
+    .slice(0, 5);
 
-  if (!hasStatusData && !hasStockData) {
+  const hasData = products.length > 0;
+
+  if (!hasData) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-brand-muted">
-        <Package size={48} className="mb-4 opacity-50" />
-        <p className="text-sm font-medium">No hay productos en inventario</p>
-        <p className="text-xs mt-1">Agrega productos para ver estadísticas</p>
+      <div className="flex flex-col items-center justify-center p-16 text-brand-muted">
+        <div className="w-24 h-24 mb-6 rounded-full bg-brand-bg flex items-center justify-center">
+          <ShoppingBag size={48} className="opacity-30" />
+        </div>
+        <p className="text-lg font-bold text-brand-ink mb-2">Sin productos en inventario</p>
+        <p className="text-sm mb-6">Agrega productos para ver las estadísticas del dashboard</p>
+        <button
+          onClick={() => onNavigate('all')}
+          className="px-6 py-3 bg-brand-ink text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
+        >
+          Agregar Primer Producto
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 lg:space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Total SKU" 
-          value={stats.totalItems.toString()} 
+          title="Total SKU"
+          value={products.length.toString()}
           icon={<Package size={20} className="text-brand-ink" />}
+          color="text-brand-ink"
           delay={0.1}
           onClick={() => onNavigate('all')}
         />
         <StatCard 
-          title="Stock Bajo" 
-          value={stats.lowStockItems.toString()} 
-          icon={<AlertTriangle size={20} className="text-[#B45309]" />}
-          color="text-[#B45309]"
-          delay={0.2}
-          onClick={() => onNavigate('stock')}
+          title="Unidades"
+          value={stats.totalItems.toString()}
+          icon={<Package size={20} className="text-blue-600" />}
+          color="text-blue-600"
+          delay={0.15}
+          subtitle="artículos en inventario"
         />
         <StatCard 
-          title="Valor Total" 
-          value={formatCurrency(stats.totalValueUsd)} 
+          title="Stock Bajo"
+          value={stats.lowStockItems.toString()}
+          icon={<AlertTriangle size={20} className="text-orange-500" />}
+          color="text-orange-500"
+          delay={0.2}
+          onClick={() => onNavigate('stock')}
+          subtitle="requieren atención"
+        />
+        <StatCard 
+          title="Valor Total"
+          value={`$${Math.round(stats.totalValueMxn).toLocaleString()}`}
           icon={<DollarSign size={20} className="text-green-600" />}
-          delay={0.3}
-          subtitle={`≈ ${Math.round(stats.totalValueMxn).toLocaleString()} MXN`}
-          onClick={() => onNavigate('finances')}
+          color="text-green-600"
+          delay={0.25}
+          subtitle="MXN inversión"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <div ref={pieContainerRef} className="bg-brand-surface p-4 lg:p-8 rounded-xl border border-brand-border min-h-[350px] lg:h-[400px] flex flex-col transition-colors duration-300">
-          <div className="flex justify-between items-center mb-4 lg:mb-8">
-             <h3 className="font-bold text-xs lg:text-sm tracking-tight text-brand-ink">Distribución por Status</h3>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Status Donut Chart */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-bold text-gray-800 text-sm">Distribución por Status</h3>
+            <span className="text-xs text-gray-400 font-medium">Actualizado ahora</span>
           </div>
-          {(canRenderCharts && hasStatusData) ? (
-            <div className="flex-1 w-full" style={{ minHeight: '280px', minWidth: 0 }}>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === 0 ? '#1A1A1A' : COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+          
+          {isMounted && statusData.length > 0 ? (
+            <div className="flex items-center gap-6">
+              <div className="w-48 h-48 relative flex-shrink-0">
+                <ResponsiveContainer width="99%" height={180} minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center Text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-gray-800">{totalStatus}</span>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">Total</span>
+                </div>
+              </div>
+              
+              {/* Legend */}
+              <div className="flex-1 space-y-3">
+                {statusData.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-xs font-medium text-gray-600">{item.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-gray-800">{item.value}</span>
+                      <span className="text-[10px] text-gray-400 ml-1">
+                        ({Math.round((item.value / totalStatus) * 100)}%)
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-brand-muted text-sm">
-              No hay productos en inventario
+            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+              {isMounted ? 'Sin datos de status' : 'Cargando...'}
             </div>
           )}
         </div>
 
-        <div ref={barContainerRef} className="bg-white p-4 lg:p-8 rounded-xl border border-brand-border min-h-[350px] lg:h-[400px] flex flex-col">
-          <div className="flex justify-between items-center mb-4 lg:mb-8">
-             <h3 className="font-bold text-xs lg:text-sm tracking-tight text-brand-ink">Niveles de Inventario</h3>
+        {/* Inventory Bar Chart */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-bold text-gray-800 text-sm">Top Inventario</h3>
+            <button 
+              onClick={() => onNavigate('stock')}
+              className="text-xs text-brand-accent font-bold hover:underline"
+            >
+              Ver todos
+            </button>
           </div>
-{(canRenderCharts && hasStockData) ? (
-            <div className="flex-1 w-full" style={{ minHeight: '280px', minWidth: 0 }}>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={stockData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
-                  <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} tick={{fill: 'var(--brand-muted)'}} />
-                  <YAxis fontSize={10} tickLine={false} axisLine={false} tick={{fill: 'var(--brand-muted)'}} />
-                  <Tooltip cursor={{ fill: 'var(--brand-bg)' }} contentStyle={{ backgroundColor: 'var(--brand-surface)', borderColor: 'var(--brand-border)', color: 'var(--brand-ink)', fontSize: '10px' }} />
-                  <Bar dataKey="stock" fill="var(--brand-ink)" radius={[2, 2, 0, 0]} />
+          
+          {isMounted && stockData.length > 0 ? (
+            <div style={{ height: 180 }}>
+              <ResponsiveContainer width="99%" height={180}>
+                <BarChart 
+                  data={stockData} 
+                  layout="vertical"
+                  margin={{ left: 0, right: 20, top: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                  <XAxis type="number" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    width={80}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: number, name: string, props: any) => [
+                      `${value} unidades`, 
+                      props.payload.brand
+                    ]}
+                  />
+                  <Bar 
+                    dataKey="stock" 
+                    fill="#1A1A1A" 
+                    radius={[0, 4, 4, 0]} 
+                    barSize={16}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-brand-muted text-sm">
-              No hay productos en inventario
+            <div className="h-48 flex items-center justify-center text-gray-400 text-sm">
+              Sin datos de inventario
             </div>
           )}
         </div>
       </div>
+
+      {/* Low Stock Table */}
+      {lowStockProducts.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <AlertTriangle size={16} className="text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800 text-sm">Punto de Reorden</h3>
+                <p className="text-xs text-gray-400">Productos con stock bajo</p>
+              </div>
+            </div>
+            <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
+              {lowStockProducts.length} productos
+            </span>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Producto</th>
+                  <th className="px-5 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Categoría</th>
+                  <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider">Stock</th>
+                  <th className="px-5 py-3 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider">Mín.</th>
+                  <th className="px-5 py-3 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {lowStockProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-md flex items-center justify-center">
+                          <Package size={14} className="text-gray-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-800 truncate max-w-[150px]">{product.name}</p>
+                          <p className="text-[10px] text-gray-400">{product.brand}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="text-xs font-medium text-gray-600">{product.category}</span>
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <span className="inline-flex items-center justify-center w-8 h-6 bg-red-100 text-red-700 text-xs font-bold rounded">
+                        {product.quantity}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-center">
+                      <span className="text-xs text-gray-400">{product.minStock}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => onNavigate('all')}
+                          className="p-1.5 text-gray-400 hover:text-brand-ink hover:bg-gray-100 rounded transition-colors"
+                          title="Ver producto"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => onNavigate('all')}
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                          title="Reabastecer"
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function StatCard({ title, value, color = "text-brand-ink", delay, icon, subtitle, onClick }: { title: string, value: string, color?: string, delay: number, icon?: React.ReactNode, subtitle?: string, onClick?: () => void }) {
+function StatCard({ title, value, color = "text-brand-ink", delay, icon, subtitle, onClick }: { 
+  title: string; 
+  value: string; 
+  color?: string; 
+  delay: number; 
+  icon?: React.ReactNode; 
+  subtitle?: string; 
+  onClick?: () => void 
+}) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ 
-        y: -5,
-        scale: 1.02,
-        boxShadow: "0 20px 40px rgba(0,0,0,0.12)",
-        transition: { duration: 0.2, ease: "easeOut" }
-      }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ y: -3, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
       transition={{ delay }}
       onClick={onClick}
-      className={cn(
-        "bg-brand-surface p-6 rounded-2xl border border-brand-border transition-all duration-300 relative overflow-hidden cursor-pointer",
-        "shadow-[0_2px_10px_rgba(0,0,0,0.02)] active:shadow-inner"
-      )}
+      className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-pointer"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-[10px] lg:text-[12px] uppercase tracking-widest text-brand-label font-black">
-          {title}
-        </div>
-        <div className="p-2 bg-brand-bg rounded-lg border border-brand-border/50">
-          {icon}
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{title}</span>
+        <div className="p-1.5 bg-gray-100 rounded-lg">{icon}</div>
       </div>
-      <div className={cn("text-24px lg:text-36px font-black tracking-tighter leading-none mb-1", color)}>
+      <div className={cn("text-2xl font-black tracking-tight", color)}>
         {value}
       </div>
       {subtitle && (
-        <div className="flex items-center gap-1.5">
-          <div className="w-1 h-1 rounded-full bg-brand-accent animate-pulse" />
-          <div className="text-[10px] font-bold text-brand-muted italic tracking-wide">
-            {subtitle}
-          </div>
-        </div>
+        <p className="text-[10px] text-gray-400 mt-1 font-medium">{subtitle}</p>
       )}
-      
-      {/* 3D Accent Line */}
-      <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-brand-ink/5 to-transparent opacity-50" />
     </motion.div>
   );
 }

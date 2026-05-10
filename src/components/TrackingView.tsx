@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Package, Truck, CheckCircle2, Clock, MapPin, Building2, Calendar, Smartphone } from 'lucide-react';
 import { Product, OrderStatus } from '../types';
-import { cn, formatDate } from '../lib/utils';
+import { cn, formatDate, getProxyImageUrl } from '../lib/utils';
 
 interface TrackingViewProps {
   product: Product;
@@ -38,7 +38,7 @@ export function TrackingView({ product }: TrackingViewProps) {
           <div className="flex flex-col md:flex-row gap-8 items-center">
             {product.imageUrl ? (
               <div className="w-32 h-32 rounded-2xl overflow-hidden border border-brand-border bg-[#F8FAF9]">
-                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                <img src={getProxyImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" crossOrigin="anonymous" />
               </div>
             ) : (
               <div className="w-32 h-32 rounded-2xl bg-[#F8FAF9] flex items-center justify-center border border-brand-border text-brand-border">

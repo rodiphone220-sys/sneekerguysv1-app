@@ -56,7 +56,7 @@ import { SystemSettings } from './components/SystemSettings';
 import { SneekyBot } from './components/SneekyBot';
 import { BuscadorSneaker } from './components/BuscadorSneaker';
 import { ClientesPage } from './components/ClientesPage';
-import { cn, formatCurrency, formatDate, exportToCSV } from './lib/utils';
+import { cn, formatCurrency, formatDate, exportToCSV, getProxyImageUrl } from './lib/utils';
 import { SystemSettings as SettingsType } from './types';
 
 type ActiveTab = 'dashboard' | 'all' | 'pending' | 'delivered' | 'stock' | 'zafi' | 'orders' | 'finances' | 'settings' | 'catalog' | 'messaging' | 'advisor' | 'search' | 'clientes' | 'estatus' | 'browser';
@@ -119,6 +119,8 @@ export default function App() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [trackingProduct, setTrackingProduct] = useState<Product | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isControlOpen, setIsControlOpen] = useState(false);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -505,120 +507,193 @@ export default function App() {
               icon={<DollarSign size={18} />} 
               label="Finanzas" 
             />
-            <div className="pt-4 pb-2">
-              <span className="px-4 text-[10px] font-bold text-brand-label uppercase tracking-widest">Estatus</span>
+            {/* Status Accordion */}
+            <div className="pt-4">
+              <button
+                onClick={() => setIsStatusOpen(!isStatusOpen)}
+                className="flex items-center justify-between w-full px-4 py-2 hover:bg-white/5 rounded-lg transition-colors group"
+              >
+                <span className="text-[10px] font-bold text-brand-label uppercase tracking-widest">Estatus</span>
+                <div className="flex items-center gap-2">
+                  {!isStatusOpen && (
+                    <span className="text-[10px] text-gray-500 font-medium">
+                      {products.length} total
+                    </span>
+                  )}
+                  <ChevronDown 
+                    size={14} 
+                    className={`text-gray-500 transition-transform duration-200 ${isStatusOpen ? 'rotate-180' : 'rotate-0'} group-hover:text-brand-ink`} 
+                  />
+                </div>
+              </button>
             </div>
             
-            {/* Status Flow - Accordion Style */}
-            <div className="px-2 py-2 space-y-1">
-              {STATUSES.map((status, idx) => {
-                const isActive = selectedStatus === status.id;
-                const count = products.filter(p => p.currentStatus === status.id).length;
-                return (
-                  <button
-                    key={status.id}
-                    onClick={() => {
-                      setSelectedStatus(isActive ? null : status.id);
-                      setActiveTab('all');
-                      if(window.innerWidth < 1024) setIsSidebarOpen(false);
-                    }}
-                    className={`
-                      w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all
-                      ${isActive ? 'bg-white/10 border-l-2' : 'hover:bg-white/5 border-l-2 border-transparent'}
-                    `}
-                    style={{ 
-                      borderColor: isActive ? status.color : 'transparent',
-                      marginLeft: `${idx * 8}px`
-                    }}
-                    aria-pressed={isActive}
-                  >
-                    <span className="text-lg">{status.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                        {status.label}
-                      </div>
-                      <div className="text-[10px]" style={{ color: status.color }}>
-                        {count} items
-                      </div>
-                    </div>
-                    {isActive && (
-                      <div 
-                        className="w-2 h-2 rounded-full animate-pulse" 
-                        style={{ backgroundColor: status.color }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
+            {/* Status Flow - Collapsible Accordion */}
+            <AnimatePresence>
+              {isStatusOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="px-2 py-2 space-y-1 overflow-hidden"
+                >
+                  {STATUSES.map((status, idx) => {
+                    const isActive = selectedStatus === status.id;
+                    const count = products.filter(p => p.currentStatus === status.id).length;
+                    return (
+                      <button
+                        key={status.id}
+                        onClick={() => {
+                          setSelectedStatus(isActive ? null : status.id);
+                          setActiveTab('all');
+                          if(window.innerWidth < 1024) setIsSidebarOpen(false);
+                        }}
+                        className={`
+                          w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all
+                          ${isActive ? 'bg-white/10 border-l-2' : 'hover:bg-white/5 border-l-2 border-transparent'}
+                        `}
+                        style={{ 
+                          borderColor: isActive ? status.color : 'transparent',
+                          marginLeft: `${idx * 8}px`
+                        }}
+                        aria-pressed={isActive}
+                      >
+                        <span className="text-lg">{status.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                            {status.label}
+                          </div>
+                          <div className="text-[10px]" style={{ color: status.color }}>
+                            {count} items
+                          </div>
+                        </div>
+                        {isActive && (
+                          <div 
+                            className="w-2 h-2 rounded-full animate-pulse" 
+                            style={{ backgroundColor: status.color }}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* Vistas de Control Accordion */}
+            <div className="pt-4">
+              <button
+                onClick={() => setIsControlOpen(!isControlOpen)}
+                className="flex items-center justify-between w-full px-4 py-2 hover:bg-white/5 rounded-lg transition-colors group"
+              >
+                <span className="text-[10px] font-bold text-brand-label uppercase tracking-widest">Vistas de Control</span>
+                <div className="flex items-center gap-2">
+                  {!isControlOpen && (
+                    <span className="text-[10px] text-gray-500 font-medium">
+                      {stats.total} items
+                    </span>
+                  )}
+                  <ChevronDown 
+                    size={14} 
+                    className={`text-gray-500 transition-transform duration-200 ${isControlOpen ? 'rotate-180' : 'rotate-0'} group-hover:text-brand-ink`} 
+                  />
+                </div>
+              </button>
             </div>
             
-            <div className="pt-4 pb-2">
-              <span className="px-4 text-[10px] font-bold text-brand-label uppercase tracking-widest">Vistas de Control</span>
+            <AnimatePresence>
+              {isControlOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="px-2 space-y-1 overflow-hidden"
+                >
+                  <NavItem 
+                    active={activeTab === 'all'} 
+                    onClick={() => { setActiveTab('all'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<Package size={18} />} 
+                    label="Todos los Pedidos" 
+                    badge={stats.total}
+                  />
+                  <NavItem 
+                    active={activeTab === 'pending'} 
+                    onClick={() => { setActiveTab('pending'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<Clock size={18} />} 
+                    label="Pendientes" 
+                    badge={stats.pending}
+                  />
+                  <NavItem 
+                    active={activeTab === 'delivered'} 
+                    onClick={() => { setActiveTab('delivered'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<CheckCircle2 size={18} />} 
+                    label="Entregados" 
+                  />
+                  <NavItem 
+                    active={activeTab === 'stock'} 
+                    onClick={() => { setActiveTab('stock'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<FileSpreadsheet size={18} />} 
+                    label="Stock Disponible" 
+                  />
+                  <NavItem 
+                    active={activeTab === 'zafi'} 
+                    onClick={() => { setActiveTab('zafi'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<Building2 size={18} />} 
+                    label="Filtro Zafi (USA)" 
+                  />
+                  <NavItem 
+                    active={activeTab === 'search'} 
+                    onClick={() => { setActiveTab('search'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<Search size={18} />} 
+                    label="Buscador Sneeker" 
+                  />
+                  <NavItem 
+                    active={activeTab === 'clientes'} 
+                    onClick={() => { setActiveTab('clientes'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<Users size={18} />} 
+                    label="Gestión de Clientes" 
+                  />
+                  <NavItem 
+                    active={activeTab === 'orders'} 
+                    onClick={() => { setActiveTab('orders'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+                    icon={<ShoppingCart size={18} />} 
+                    label="Órdenes de Clientes" 
+                    badge={customerOrders.length}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            {/* System Actions - Always Visible */}
+            <div className="pt-4">
+              <div className="px-4 mb-3">
+                <span className="text-[10px] font-bold text-brand-label uppercase tracking-widest">Sistema</span>
+              </div>
+              <div className="px-2 space-y-2">
+                <button
+                  onClick={() => { setActiveTab('catalog'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition-all border border-blue-200"
+                >
+                  <ListFilter size={16} />
+                  <span className="flex-1 text-left">Configurar Catálogo</span>
+                </button>
+                <button
+                  onClick={() => { setActiveTab('messaging'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold text-xs transition-all border border-purple-200"
+                >
+                  <MessageSquare size={16} />
+                  <span className="flex-1 text-left">Mensajería</span>
+                  {messagingUnreadCount > 0 && (
+                    <span className="px-2 py-0.5 bg-purple-600 text-white text-[10px] font-bold rounded-full">
+                      {messagingUnreadCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
-            <NavItem 
-              active={activeTab === 'all'} 
-              onClick={() => { setActiveTab('all'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<Package size={18} />} 
-              label="Todos los Pedidos" 
-              badge={stats.total}
-            />
-            <NavItem 
-              active={activeTab === 'pending'} 
-              onClick={() => { setActiveTab('pending'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<Clock size={18} />} 
-              label="Pendientes" 
-              badge={stats.pending}
-            />
-            <NavItem 
-              active={activeTab === 'delivered'} 
-              onClick={() => { setActiveTab('delivered'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<CheckCircle2 size={18} />} 
-              label="Entregados" 
-            />
-            <NavItem 
-              active={activeTab === 'stock'} 
-              onClick={() => { setActiveTab('stock'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<FileSpreadsheet size={18} />} 
-              label="Stock Disponible" 
-            />
-            <NavItem 
-              active={activeTab === 'zafi'} 
-              onClick={() => { setActiveTab('zafi'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<Building2 size={18} />} 
-              label="Filtro Zafi (USA)" 
-            />
-            <NavItem 
-              active={activeTab === 'search'} 
-              onClick={() => { setActiveTab('search'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<Search size={18} />} 
-              label="Buscador Sneeker" 
-            />
-            <NavItem 
-              active={activeTab === 'clientes'} 
-              onClick={() => { setActiveTab('clientes'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<Users size={18} />} 
-              label="Gestión de Clientes" 
-            />
-            <NavItem 
-              active={activeTab === 'orders'} 
-              onClick={() => { setActiveTab('orders'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<ShoppingCart size={18} />} 
-              label="Órdenes de Clientes" 
-              badge={customerOrders.length}
-            />
-            <NavItem 
-              active={activeTab === 'catalog'} 
-              onClick={() => { setActiveTab('catalog'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<ListFilter size={18} />} 
-              label="Configurar Catálogo" 
-            />
-            <NavItem 
-              active={activeTab === 'messaging'} 
-              onClick={() => { setActiveTab('messaging'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
-              icon={<MessageSquare size={18} />} 
-              label="Mensajería" 
-              badge={messagingUnreadCount > 0 ? messagingUnreadCount : undefined}
-            />
+            
             <div className="mt-6 pt-6 border-t border-brand-border">
               <button 
                 onClick={() => { setIsCustomerPortalOpen(true); if(window.innerWidth < 1024) setIsSidebarOpen(false); }}
@@ -1088,9 +1163,10 @@ export default function App() {
                                   const isValidUrl = p.imageUrl && (p.imageUrl.startsWith('http') || p.imageUrl.startsWith('data:'));
                                   return isValidUrl ? (
                                     <img 
-                                      src={p.imageUrl} 
+                                      src={getProxyImageUrl(p.imageUrl)} 
                                       alt={p.name} 
                                       className="w-full h-full object-cover"
+                                      crossOrigin="anonymous"
                                       referrerPolicy="no-referrer"
                                       onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/err/40/40'; }}
                                     />

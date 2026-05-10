@@ -1,5 +1,14 @@
 module.exports = {
   reactStrictMode: true,
+  images: {
+    domains: ['res.cloudinary.com', 'drive.google.com', 'lh3.googleusercontent.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
   async headers() {
     return [
       {
@@ -11,7 +20,7 @@ module.exports = {
           },
           {
             key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp'
+            value: 'unsafe-none'
           }
         ]
       }

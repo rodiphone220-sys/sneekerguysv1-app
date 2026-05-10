@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Search, Plus, X, Send, User, Phone, MapPin, Mail, DollarSign, MessageSquare, Eye, EyeOff, CreditCard, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Customer, Product } from '../types';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getProxyImageUrl } from '../lib/utils';
 
 interface ClientesPageProps {
   customers: Customer[];
@@ -534,7 +534,7 @@ function CustomerProductCard({ customer, products, onClose, onNavigate }: Custom
               >
                 <div className="w-20 h-20 rounded-lg overflow-hidden bg-brand-surface shrink-0">
                   {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={getProxyImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" crossOrigin="anonymous" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Package size={24} className="text-brand-muted" />

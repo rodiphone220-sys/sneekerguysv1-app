@@ -1,6 +1,6 @@
 import React from 'react';
 import { Product, OrderStatus } from '../types';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, getProxyImageUrl } from '../lib/utils';
 import { StatusPipeline } from './StatusPipeline';
 import { MoreHorizontal, Edit2, Trash2, ArrowUpRight, ChevronDown, Check, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -77,9 +77,10 @@ export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange
           const isValidUrl = product.imageUrl && (product.imageUrl.startsWith('http') || product.imageUrl.startsWith('data:'));
           return isValidUrl ? (
             <img 
-              src={product.imageUrl} 
+              src={getProxyImageUrl(product.imageUrl)} 
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              crossOrigin="anonymous"
               referrerPolicy="no-referrer"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/error/400/400';
