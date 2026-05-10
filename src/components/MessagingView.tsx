@@ -25,6 +25,7 @@ interface User {
   email: string;
   rol?: string;
   activo?: boolean;
+  unreadCount?: number;
 }
 
 interface Chat {
@@ -101,9 +102,18 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
         const data = await res.json();
         if (Array.isArray(data)) {
           const grouped: Record<string, Message[]> = {};
+          const unreadCounts: Record<string, number> = {};
+          
           data.forEach((msg: any) => {
             const senderId = msg.EMISOR_ID || '';
             const receiverId = msg.RECEPTOR_ID || '';
+            const isUnread = msg.LEIDO !== 'TRUE';
+            
+            // Count unread for each user
+            if (isUnread && receiverId === currentUser?.id) {
+              unreadCounts[senderId] = (unreadCounts[senderId] || 0) + 1;
+            }
+            
             const chatKey = senderId === currentUser?.id ? receiverId : senderId;
             if (!grouped[chatKey]) grouped[chatKey] = [];
             grouped[chatKey].push({
@@ -115,7 +125,14 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
               read: msg.LEIDO === 'TRUE'
             });
           });
+          
           setAllMessages(grouped);
+          
+          // Update users with unread counts
+          setAllUsers(prev => prev.map(u => ({
+            ...u,
+            unreadCount: unreadCounts[u.id] || 0
+          })));
         }
       }
     } catch (error) {
@@ -123,9 +140,30 @@ export function MessagingView({ settings }: { settings: SystemSettings }) {
     }
   };
 
+  // Mark messages as read
+  const markAsRead = async (userId: string) => {
+    try {
+      await fetch('/api/messaging', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'markRead',
+          emisorId: userId,
+          receptorId: currentUser?.id
+        })
+      });
+      // Update local state
+      setAllUsers(prev => prev.map(u => 
+        u.id === userId ? { ...u, unreadCount: 0 } : u
+      ));
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  };
+
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 10000);
+    const interval = setInterval(loadMessages, 5000);
     return () => clearInterval(interval);
   }, [currentUser?.id]);
 
@@ -259,7 +297,12 @@ setAllMessages(prev => {
             filteredUsers.map(user => (
               <button
                 key={user.id}
-                onClick={() => setSelectedUserId(user.id)}
+                onClick={() => {
+                  setSelectedUserId(user.id);
+                  if (user.unreadCount && user.unreadCount > 0) {
+                    markAsRead(user.id);
+                  }
+                }}
                 className={cn(
                   "w-full p-4 flex items-center gap-3 transition-all border-l-4",
                   selectedUserId === user.id 
@@ -281,8 +324,10 @@ setAllMessages(prev => {
                     )}>
                       {user.nombre}
                     </span>
-                    {user.activo && selectedUserId !== user.id && (
-                      <span className="w-2 h-2 bg-green-500 rounded-full" />
+                    {user.unreadCount && user.unreadCount > 0 && (
+                      <span className="w-5 h-5 bg-[#E11D48] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                        {user.unreadCount}
+                      </span>
                     )}
                   </div>
                   <span className={cn(

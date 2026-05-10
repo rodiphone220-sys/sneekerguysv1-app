@@ -13,6 +13,52 @@ const getAuthClient = () => {
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    
+    // Handle mark as read action
+    if (body.action === 'markRead') {
+      const authClient = getAuthClient();
+      if (!authClient) {
+        return Response.json({ error: 'Configuración incompleta' }, { status: 500 });
+      }
+      
+      const sheets = google.sheets({ version: 'v4', auth: authClient });
+      
+      // Get all messages
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: 'MENSAJERIA!A:H',
+      });
+      
+      const rows = response.data.values || [];
+      if (rows.length < 2) return Response.json({ success: true });
+      
+      const headers = rows[0];
+      const leidoColIndex = headers.indexOf('LEIDO');
+      const emisorColIndex = headers.indexOf('EMISOR_ID');
+      const receptorColIndex = headers.indexOf('RECEPTOR_ID');
+      
+      // Find and update unread messages
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const emisor = row[emisorColIndex] || '';
+        const receptor = row[receptorColIndex] || '';
+        const leido = row[leidoColIndex] || '';
+        
+        if (emisor === body.emisorId && receptor === body.receptorId && leido === 'FALSE') {
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range: `MENSAJERIA!A${i + 1}:H${i + 1}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[...row.slice(0, leidoColIndex), 'TRUE', ...row.slice(leidoColIndex + 1)]] }
+          });
+        }
+      }
+      
+      return Response.json({ success: true });
+    }
+    
+    // Original message sending logic
     const authClient = getAuthClient();
     if (!authClient) {
       return Response.json({ error: 'Configuración de Google Sheets incompleta' }, { status: 500 });
