@@ -256,9 +256,9 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
                       borderRadius: '8px',
                       fontSize: '12px'
                     }}
-                    formatter={(value: number, name: string, props: any) => [
-                      `${value} unidades`, 
-                      props.payload.brand
+                    formatter={(value, name, props): any => [
+                      `${value || 0} unidades`, 
+                      props?.payload?.brand || ''
                     ]}
                   />
                   <Bar 

@@ -48,7 +48,7 @@ export function exportToCSV(data: any[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getProxyImageUrl(url: string): string {
+export function getProxyImageUrl(url: string | undefined): string {
   if (!url) return '';
   if (url.includes('drive.google.com') || url.includes('googledrive.com')) {
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
