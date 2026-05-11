@@ -5,6 +5,39 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1yTp-53mSv89l3LALHDlYevqeYk2Aqh
 let messageCache: { data: any; timestamp: number } | null = null;
 const CACHE_DURATION = 10000; // 10 seconds
 
+const LOG_SHEET_NAME = 'LOG_EMAILS';
+
+async function logEmailToSheet(auth: any, data: {
+  pedidoNum: string;
+  emailCliente: string;
+  status: 'ENVIADO' | 'ERROR';
+  asunto: string;
+  exito: boolean;
+  cuentaUsada: string;
+}) {
+  try {
+    const sheets = google.sheets({ version: 'v4', auth });
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SHEET_ID,
+      range: `${LOG_SHEET_NAME}!A:G`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[
+          new Date().toISOString(),      // [0] FECHA
+          data.pedidoNum || '',         // [1] PEDIDO_NUM
+          data.emailCliente || '',      // [2] EMAIL_CLIENTE
+          data.status,                  // [3] STATUS
+          data.asunto || '',            // [4] ASUNTO
+          data.exito ? 'TRUE' : 'FALSE', // [5] EXITO
+          data.cuentaUsada || 'SYSTEM'  // [6] CUENTA_USADA
+        ]],
+      },
+    });
+  } catch (logError) {
+    console.error('Error logging to LOG_EMAILS:', logError);
+  }
+}
+
 const getAuthClient = () => {
   const clientEmail = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '').trim();
   let privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').trim();
@@ -196,9 +229,31 @@ export async function POST(req: Request) {
         },
       });
 
+      await logEmailToSheet(authClient, {
+        pedidoNum: newId,
+        emailCliente: receptorId,
+        status: 'ENVIADO',
+        asunto: tipo || 'internal',
+        exito: true,
+        cuentaUsada: emisorId || 'SYSTEM'
+      });
+
       return Response.json({ success: true, id: newId });
     } catch (sendError: any) {
       console.error('Send message error:', sendError?.message);
+      
+      const authClient = getAuthClient();
+      if (authClient) {
+        await logEmailToSheet(authClient, {
+          pedidoNum: body.receptorId || 'N/A',
+          emailCliente: body.receptorId || '',
+          status: 'ERROR',
+          asunto: body.tipo || 'internal',
+          exito: false,
+          cuentaUsada: body.emisorId || 'SYSTEM'
+        });
+      }
+      
       return Response.json({ error: 'Cuota de API excedida. Intenta en unos segundos.' }, { status: 503 });
     }
   } catch (error: any) {

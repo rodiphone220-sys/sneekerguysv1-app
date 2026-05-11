@@ -23,19 +23,19 @@ interface DashboardProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPRADO: '#3B82F6',
-  EN_RUTA: '#F59E0B', 
-  EN_BODEGA: '#F97316',
-  ENVIADO: '#8B5CF6',
-  ENTREGADO: '#22C55E'
+  'Comprado en USA': '#3B82F6',
+  'En Ruta a Zafi': '#06B6D4',
+  'Recibido en Zafi': '#F97316',
+  'Enviado a México': '#8B5CF6',
+  'Entregado': '#22C55E'
 };
 
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  COMPRADO: 'Comprado USA',
-  EN_RUTA: 'En Ruta',
-  EN_BODEGA: 'En Zafi',
-  ENVIADO: 'Enviado MX',
-  ENTREGADO: 'Entregado'
+const STATUS_LABELS: Record<string, string> = {
+  'Comprado en USA': '📦 Comprado USA',
+  'En Ruta a Zafi': '✈️ En Ruta',
+  'Recibido en Zafi': '📍 En Zafi',
+  'Enviado a México': '🚚 Enviado MX',
+  'Entregado': '✅ Entregado'
 };
 
 export function Dashboard({ products, onNavigate }: DashboardProps) {
@@ -52,18 +52,21 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
       totalValueUsd: products.reduce((acc, p) => acc + ((Number(p.buyPriceUsd) || 0) * (Number(p.quantity) || 1)), 0),
       totalValueMxn: products.reduce((acc, p) => acc + ((Number(p.buyPriceMxn) || 0) * (Number(p.quantity) || 1)), 0),
       statusCounts: {
-        COMPRADO: 0,
-        EN_RUTA: 0,
-        EN_BODEGA: 0,
-        ENVIADO: 0,
-        ENTREGADO: 0
-      }
+        'Comprado en USA': 0,
+        'En Ruta a Zafi': 0,
+        'Recibido en Zafi': 0,
+        'Enviado a México': 0,
+        'Entregado': 0
+      } as Record<string, number>
     };
     
     products.forEach(p => {
-      const status = p.currentStatus as OrderStatus;
-      if (s.statusCounts[status] !== undefined) {
-        s.statusCounts[status] += (Number(p.quantity) || 1);
+      const status = p.currentStatus || '';
+      const matchedStatus = Object.keys(s.statusCounts).find(
+        key => key.toLowerCase() === status.toLowerCase()
+      );
+      if (matchedStatus) {
+        (s.statusCounts as Record<string, number>)[matchedStatus] += (Number(p.quantity) || 1);
       }
     });
     
@@ -73,9 +76,9 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
   const statusData = Object.entries(stats.statusCounts)
     .filter(([_, value]) => value > 0)
     .map(([name, value]) => ({
-      name: STATUS_LABELS[name as OrderStatus],
+      name: STATUS_LABELS[name] || name,
       value,
-      color: STATUS_COLORS[name]
+      color: STATUS_COLORS[name] || '#888'
     }));
 
   const totalStatus = statusData.reduce((acc, item) => acc + item.value, 0);

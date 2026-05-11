@@ -185,17 +185,21 @@ function LoginForm() {
   };
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    // 1. Extraer email directamente del token de Google (SIN inputs manuales)
-    const decoded: any = jwtDecode(credentialResponse.credential);
-    const userEmail = decoded.email;
-    const userName = decoded.name;
-
-    // 2. Verificación SILENCIOSA contra el Data Sheet
-    await verifyAndLogin(userEmail, userName);
+    try {
+      const decoded: any = jwtDecode(credentialResponse.credential);
+      const userEmail = decoded.email;
+      const userName = decoded.name;
+      await verifyAndLogin(userEmail, userName);
+    } catch (err) {
+      console.error('Google success error:', err);
+      setAuthStatus({ type: 'error', message: 'Error al procesar credenciales. Intenta de nuevo.' });
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleError = () => {
     setAuthStatus({ type: 'error', message: 'Error con Google. Intenta de nuevo.' });
+    setIsLoading(false);
   };
 
   return (
@@ -241,29 +245,6 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Dev Bypass - Siempre visible en desarrollo */}
-          {process.env.NODE_ENV !== 'production' && (
-            <button
-              type="button"
-              onClick={() => {
-                const devUser = {
-                  id: 'dev-001',
-                  idCode: 'DEV',
-                  nombre: 'Developer',
-                  email: 'dev@localhost',
-                  rol: 'MASTER 1' as const,
-                  permisos: 'ALL',
-                  activo: true
-                };
-                localStorage.setItem('sneaker_user', JSON.stringify(devUser));
-                router.push('/');
-              }}
-              className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all border border-white/10"
-            >
-              🔓 Modo Desarrollo - Entrar Directo
-            </button>
-          )}
-
           {/* Botón Google OAuth - Flujo 100% automático */}
           <div className="space-y-4">
             {!clientIdConfigured ? (
@@ -291,6 +272,28 @@ function LoginForm() {
               </div>
             )}
 
+            {/* Botón Demo/Guest Mode */}
+            <button
+              type="button"
+              onClick={() => {
+                const demoUser = {
+                  id: 'demo-001',
+                  idCode: 'DEMO',
+                  nombre: 'Cliente Demo',
+                  email: 'demo@thesneakerguys.com',
+                  rol: 'MASTER 1' as const,
+                  permisos: 'TODOS',
+                  activo: true,
+                  isDemo: true
+                };
+                localStorage.setItem('sneaker_user', JSON.stringify(demoUser));
+                router.push('/');
+              }}
+              className="w-full mt-4 py-3 bg-brand-accent/20 hover:bg-brand-accent/30 text-brand-accent border border-brand-accent/30 rounded-xl text-sm font-bold uppercase tracking-widest transition-all"
+            >
+              👤 Entrar como Invitado (Demo Mode)
+            </button>
+
             {/* Información */}
             <div className="mt-8 p-4 bg-brand-accent/10 border border-brand-accent/20 rounded-xl">
               <p className="text-white/70 text-sm text-center">
@@ -313,12 +316,6 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  // En desarrollo: mostrar botón de bypass (sin Google OAuth para evitar 403)
-  if (IS_DEV) {
-    return <DevLoginForm />;
-  }
-  
-  // En producción: cargar Google OAuth normalmente
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <LoginForm />

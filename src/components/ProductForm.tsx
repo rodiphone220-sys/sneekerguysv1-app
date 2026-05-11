@@ -48,6 +48,13 @@ interface ProductFormProps {
 
 const CATEGORIES = ['CALZADO', 'ACCESORIOS', 'STREETWEAR', 'COLECCIONABLES', 'OTROS'];
 const GENDERS = ['HOMBRE', 'MUJER', 'UNISEX', 'KIDS'];
+const LOGISTICS_STATUS = [
+  'Comprado en USA',
+  'En Ruta a Zafi',
+  'Recibido en Zafi',
+  'Enviado a México',
+  'Entregado'
+];
 const STATUSES = ['En Tienda / Boutique', 'Tránsito a Warehouse', 'En Bodega (Ready)', 'Vendido / Entregado'];
 const CARD_TYPES = ['AMEX CORPORATE', 'VISA BUSINESS', 'MASTERCARD BLACK', 'CITI PREMIER', 'EFECTIVO', 'TRANSFERENCIA', 'OTRO'];
 
@@ -204,7 +211,7 @@ export function ProductForm({
     sellPriceMxn: 0,
     quantity: 1,
     imageUrl: '',
-    currentStatus: 'En Tienda / Boutique',
+    currentStatus: 'Comprado en USA',
     isShowcase: true,
     clientName: '',
     clientEmail: '',
@@ -272,6 +279,22 @@ export function ProductForm({
     }));
     setItems(updatedItems);
   };
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    const hasChanges = items.some(item => 
+      item.buyPriceMxn > 0 && (item.sellPriceMxn === 0 || item.sellPriceMxn === undefined)
+    );
+    if (hasChanges) {
+      const updatedItems = items.map(item => ({
+        ...item,
+        sellPriceMxn: item.sellPriceMxn === 0 || !item.sellPriceMxn
+          ? Math.round((item.buyPriceMxn || 0) * (1 + (globalMarkup / 100)))
+          : item.sellPriceMxn
+      }));
+      setItems(updatedItems);
+    }
+  }, [globalMarkup]);
 
   // El tipo de cambio se mantiene fijo. Solo se actualiza manualmente al presionar "Actualizar"
   // useEffect(() => {}, []);
@@ -643,6 +666,23 @@ export function ProductForm({
                       placeholder="TSG26-00000"
                       className="w-full px-5 py-3 bg-white border border-brand-border rounded-xl text-sm font-mono font-bold outline-none focus:border-brand-ink border-b-2 border-brand-accent/30"
                     />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest pl-1">Estatus de Logística</label>
+                    <div className="relative">
+                      <select 
+                        value={items[activeItemIndex]?.currentStatus || 'Comprado en USA'}
+                        onChange={e => updateItem(activeItemIndex, { currentStatus: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-brand-border rounded-xl text-xs font-bold outline-none focus:border-brand-ink appearance-none"
+                      >
+                        {LOGISTICS_STATUS.map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <svg className="w-4 h-4 text-brand-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest pl-1">Notas Internas / Ubicación Física</label>
@@ -1225,10 +1265,16 @@ export function ProductForm({
               <motion.button 
                 whileTap={{ scale: 0.95 }}
                 type="submit" 
-                className="flex-1 md:flex-none px-10 py-3 rounded-xl font-bold bg-brand-ink text-white hover:bg-black transition-all text-sm shadow-xl shadow-black/10 flex items-center justify-center gap-2"
+                disabled={isUploading}
+                className="flex-1 md:flex-none px-10 py-3 rounded-xl font-bold bg-brand-ink text-white hover:bg-black transition-all text-sm shadow-xl shadow-black/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {product ? 'Actualizar Cambios' : `Registrar ${items.length} Artículos`}
-                <span className="opacity-40"><ChevronRight size={16} /></span>
+                {isUploading ? (
+                  <><Loader2 size={16} className="animate-spin" /> Procesando...</>
+                ) : product ? (
+                  <>Actualizar Cambios <ChevronRight size={16} /></>
+                ) : (
+                  <>Registrar ${items.length} Artículos <ChevronRight size={16} /></>
+                )}
               </motion.button>
             </div>
           </footer>

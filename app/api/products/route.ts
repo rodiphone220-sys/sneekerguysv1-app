@@ -18,20 +18,28 @@ const parseSheetNumber = (val: any) => {
 };
 
 // =====================================================
-// MAPEO EXACTO DE 38 COLUMNAS (A a AL)
+// MAPEO EXACTO DE 38 COLUMNAS (A a AL) - ÍNDICES FIJOS
 // =====================================================
 // Índice = Letra - 1 (A=0, B=1, ..., AL=37)
 const mapProductToRow = (product: any): any[] => {
   const today = new Date().toISOString().split('T')[0];
   const sku = product.sku_manual || product.sku || product.id || '';
   
-  // Calcular COSTO_MXN (Col S = índice 18)
+  // Determinar tipo de compra
+  const tipoCompra = (product.tipo_compra || product.origen_articulo || 'USA').toUpperCase();
+  const isNacional = tipoCompra === 'NACIONAL';
+  
+  // COSTO_USD: 0 si es nacional
+  const costoUsd = isNacional ? 0 : (product.buyPriceUsd || 0);
+  
+  // COSTO_MXN (Col S = índice 18)
   const costoMxn = product.buyPriceMxn || 0;
   
-  // Calcular UTILIDAD_BRUTA (Col U = índice 20)
-  const utilidadBruta = product.sellPriceMxn 
-    ? product.sellPriceMxn - (product.buyPriceMxn || 0)
-    : 0;
+  // PRECIO_VENTA_MXN (Col T = índice 19)
+  const precioVentaMxn = product.sellPriceMxn || 0;
+  
+  // UTILIDAD_BRUTA (Col U = índice 20) = Precio Venta - Costo MXN
+  const utilidadBruta = precioVentaMxn - costoMxn;
   
   // Manejar imageUrl
   let imageLink = product.imageUrl || '';
@@ -58,15 +66,15 @@ const mapProductToRow = (product: any): any[] => {
     product.boutique || '',       // [10] K: BOUTIQUE_ORIGEN
     imageLink,                     // [11] L: LINK_IMAGENES
     product.origen_articulo || '', // [12] M: ORIGEN_ARTICULO
-    product.buyPriceUsd || 0,     // [13] N: COSTO_USD
+    costoUsd,                     // [13] N: COSTO_USD (para compatibilidad legacy)
     product.exchangeRate || 18,   // [14] O: TIPO_CAMBIO
-    product.buyPriceMxn || 0,     // [15] P: COSTO_ENVIO_USA
-    product.sellPriceMxn || 0,    // [16] Q: PRECIO_VENTA
-    product.currentStatus || '',  // [17] R: STATUS
+    tipoCompra,                   // [15] P: TIPO_COMPRA ('NACIONAL' o 'USA')
+    costoUsd,                     // [16] Q: COSTO_USD (0 si es nacional)
+    '',                           // [17] R: (reservado)
     costoMxn,                     // [18] S: COSTO_MXN
-    '',                           // [19] T: (reservado)
+    precioVentaMxn,               // [19] T: PRECIO_VENTA_MXN
     utilidadBruta,                // [20] U: UTILIDAD_BRUTA
-    '',                           // [21] V: (reservado)
+    product.currentStatus || '',  // [21] V: STATUS_LOGISTICA
     product.clientAddress || '',  // [22] W: UBICACION_DESTINO
     '',                           // [23] X: (reservado)
     '',                           // [24] Y: (reservado)
@@ -97,11 +105,11 @@ const mapRowToProduct = (row: any[], index: number): any => ({
   name: row[8] || '',                  // [8] I: ARTICULO_MODELO
   brand: row[40] || '',               // [40] AO: MARCA
   category: row[9] || '',             // [9] J: CATEGORIA
-  currentStatus: row[21] || 'COMPRADO', // [21] V: STATUS (CRÍTICO para filtros)
+  currentStatus: row[21] || 'Comprado en USA', // [21] V: STATUS_LOGISTICA
   quantity: 1,                         // Por defecto 1
   minStock: 1,                        // Por defecto 1
   
-  // Campos adicionales
+  // Campos actualizados según mapeo de 38 columnas
   fecha_registro: row[1] || '',         // [1] B: FECHA_REGISTRO
   numero_pedido: row[2] || '',         // [2] C: NUMERO_PEDIDO
   clientName: row[3] || '',            // [3] D: CLIENTE_NOMBRE
@@ -111,18 +119,17 @@ const mapRowToProduct = (row: any[], index: number): any => ({
   metodo_pago_cliente: row[7] || '',   // [7] H: METODO_PAGO_CLIENTE
   boutique: row[10] || '',            // [10] K: BOUTIQUE_ORIGEN
   imageUrl: row[11] || '',            // [11] L: LINK_IMAGENES
-  tipo_compra: row[12] || '',         // [12] M: ORIGEN_ARTICULO
-  buyPriceUsd: parseSheetNumber(row[13]), // [13] N: COSTO_USD
+  origen_articulo: row[12] || '',      // [12] M: ORIGEN_ARTICULO
+  buyPriceUsd: parseSheetNumber(row[13]) || parseSheetNumber(row[16]) || 0, // [13] N o [16] Q: COSTO_USD
   exchangeRate: parseSheetNumber(row[14]) || 18, // [14] O: TIPO_CAMBIO
-  buyPriceMxn: parseSheetNumber(row[15]), // [15] P: COSTO_ENVIO_USA
-  sellPriceMxn: parseSheetNumber(row[16]), // [16] Q: PRECIO_VENTA
+  tipo_compra: row[15] || 'USA',       // [15] P: TIPO_COMPRA
   costo_mxn: parseSheetNumber(row[18]), // [18] S: COSTO_MXN
-  estado_envio_usa: row[19] || '',    // [19] T: STATUS_ENTREGA
-  ubicacion_actual: row[20] || '',   // [20] U: UBICACION_ACTUAL
+  sellPriceMxn: parseSheetNumber(row[19]), // [19] T: PRECIO_VENTA_MXN
   utilidad_bruta: parseSheetNumber(row[20]), // [20] U: UTILIDAD_BRUTA
   clientAddress: row[22] || '',       // [22] W: UBICACION_DESTINO
   notes: row[33] || '',               // [33] AH: OBSERVACIONES
   payment_card: row[34] || '',        // [34] AI: TARJETA_PAGO
+  buyPriceMxn: parseSheetNumber(row[18]), // Costo MXN para compatibilidad
   size: row[41] || '',                // [41] AP: TALLA
   color_description: row[42] || '',   // [42] AQ: COLOR
   gender: row[43] || '',              // [43] AR: GENERO
