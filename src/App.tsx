@@ -484,9 +484,16 @@ export default function App() {
       >
         <div className="p-8 px-6 min-w-[240px]">
           <div className="flex flex-col gap-1 mb-10">
-            <h1 className="font-extrabold text-2xl tracking-tight text-brand-ink leading-tight">
-              The Sneacker <span className="text-brand-accent">Guys</span>
-            </h1>
+            <div className="w-full max-w-[180px] h-auto">
+              <img 
+                src="/logo.png?v=${Date.now()}" 
+                alt="The Sneaker Guys" 
+                className="w-full h-auto object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
             <span className="text-[10px] font-medium text-gray-400 tracking-[0.25em] uppercase">Sales & Stock Manager</span>
           </div>
 
