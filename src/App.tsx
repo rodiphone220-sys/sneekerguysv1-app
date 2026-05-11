@@ -37,6 +37,7 @@ import {
   Moon,
   ShoppingCart,
   Loader2,
+  Mail,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, OrderStatus, CustomerOrder, Customer, Category } from './types';
@@ -56,10 +57,11 @@ import { SystemSettings } from './components/SystemSettings';
 import { SneekyBot } from './components/SneekyBot';
 import { BuscadorSneaker } from './components/BuscadorSneaker';
 import { ClientesPage } from './components/ClientesPage';
+import { EmailClient } from './components/EmailClient';
 import { cn, formatCurrency, formatDate, exportToCSV, getProxyImageUrl } from './lib/utils';
 import { SystemSettings as SettingsType } from './types';
 
-type ActiveTab = 'dashboard' | 'all' | 'pending' | 'delivered' | 'stock' | 'zafi' | 'orders' | 'finances' | 'settings' | 'catalog' | 'messaging' | 'advisor' | 'search' | 'clientes' | 'estatus' | 'browser';
+type ActiveTab = 'dashboard' | 'all' | 'pending' | 'delivered' | 'stock' | 'zafi' | 'orders' | 'finances' | 'settings' | 'catalog' | 'messaging' | 'advisor' | 'search' | 'clientes' | 'estatus' | 'browser' | 'email';
 
 const STATUSES = [
   { id: 'COMPRADO', label: 'Comprado en USA', icon: '📦', color: '#3B82F6' },
@@ -691,6 +693,13 @@ export default function App() {
                     </span>
                   )}
                 </button>
+                <button
+                  onClick={() => { setActiveTab('email'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-brand-ink to-gray-800 hover:from-gray-800 hover:to-brand-ink text-white font-semibold text-xs transition-all border border-white/10 shadow-lg"
+                >
+                  <Mail size={16} />
+                  <span className="flex-1 text-left">Correo Email</span>
+                </button>
               </div>
             </div>
             
@@ -884,6 +893,7 @@ export default function App() {
           {!isLoading && activeTab === 'dashboard' && <Dashboard products={products} onNavigate={setActiveTab} />}
           {!isLoading && activeTab === 'advisor' && <InvestmentAdvisor products={products} />}
           {!isLoading && activeTab === 'messaging' && <MessagingView settings={systemSettings} />}
+          {!isLoading && activeTab === 'email' && <EmailClient />}
           {!isLoading && activeTab === 'settings' && <SystemSettings settings={systemSettings} onUpdateSettings={setSystemSettings} user={user} />}
           {!isLoading && activeTab === 'finances' && (
             <FinanceView 

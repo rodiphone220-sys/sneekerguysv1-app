@@ -124,6 +124,7 @@ function LoginForm() {
   }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [authStatus, setAuthStatus] = useState<{ type: 'success' | 'error' | 'loading'; message: string } | null>(null);
+  const [googleFailed, setGoogleFailed] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -205,6 +206,7 @@ function LoginForm() {
 
   const handleGoogleError = () => {
     console.warn('Google OAuth error - puede ser error 403 de origen no autorizado');
+    setGoogleFailed(true);
     setAuthStatus({ type: 'error', message: 'Error de Google (posible 403). Usa el botón de Demo para entrar.' });
     setIsLoading(false);
   };
@@ -252,9 +254,9 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Botón Google OAuth - Flujo 100% automático */}
+          {/* Botón Google OAuth - Solo mostrar si no ha fallado */}
           <div className="space-y-4">
-            {!clientIdConfigured ? (
+            {!clientIdConfigured || googleFailed ? (
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
                 <p className="text-yellow-400 text-sm text-center font-medium">
                   ⚠️ Configura NEXT_PUBLIC_GOOGLE_CLIENT_ID en .env
