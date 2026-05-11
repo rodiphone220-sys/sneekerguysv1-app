@@ -186,19 +186,26 @@ function LoginForm() {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
+      if (!credentialResponse || !credentialResponse.credential) {
+        console.warn('Google Login cancelado o bloqueado por origen.');
+        setAuthStatus({ type: 'error', message: 'Login cancelado. Usa el modo Demo si el problema persiste.' });
+        setIsLoading(false);
+        return;
+      }
       const decoded: any = jwtDecode(credentialResponse.credential);
       const userEmail = decoded.email;
       const userName = decoded.name;
       await verifyAndLogin(userEmail, userName);
     } catch (err) {
       console.error('Google success error:', err);
-      setAuthStatus({ type: 'error', message: 'Error al procesar credenciales. Intenta de nuevo.' });
+      setAuthStatus({ type: 'error', message: 'Error al procesar credenciales. Intenta de nuevo o usa el modo Demo.' });
       setIsLoading(false);
     }
   };
 
   const handleGoogleError = () => {
-    setAuthStatus({ type: 'error', message: 'Error con Google. Intenta de nuevo.' });
+    console.warn('Google OAuth error - puede ser error 403 de origen no autorizado');
+    setAuthStatus({ type: 'error', message: 'Error de Google (posible 403). Usa el botón de Demo para entrar.' });
     setIsLoading(false);
   };
 
