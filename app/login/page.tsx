@@ -270,13 +270,14 @@ function LoginForm() {
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
-                  useOneTap={false}
+                  useOneTap={true}
                   auto_select={false}
-                  theme="outline"
+                  theme="filled_blue"
                   size="large"
                   text="signin_with"
-                  shape="rectangular"
-                  ux_mode="popup"
+                  shape="pill"
+                  ux_mode="redirect"
+                  redirectTo="/"
                 />
               </div>
             )}
