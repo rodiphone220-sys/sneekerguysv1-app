@@ -277,7 +277,6 @@ function LoginForm() {
                   text="signin_with"
                   shape="pill"
                   ux_mode="redirect"
-                  redirectTo="/"
                 />
               </div>
             )}
