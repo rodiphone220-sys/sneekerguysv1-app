@@ -14,6 +14,7 @@ interface OCRData {
   size?: string;
   buyPriceUsd?: number;
   moneda_compra?: 'USD' | 'MXN';
+  tags?: string[];
 }
 
 interface OCRModalProps {

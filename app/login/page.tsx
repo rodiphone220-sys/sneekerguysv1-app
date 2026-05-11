@@ -5,9 +5,113 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Terminal } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
+function DevLoginForm() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleDevLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Intentar login con usuario de desarrollo
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', email: 'dev@localhost' })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.exists && data.user) {
+        localStorage.setItem('sneaker_user', JSON.stringify(data.user));
+        router.push('/');
+      } else {
+        // Crear usuario de desarrollo automáticamente
+        const devUser = {
+          id: 'dev-001',
+          idCode: 'DEV',
+          nombre: 'Developer',
+          email: 'dev@localhost',
+          rol: 'MASTER 1' as const,
+          permisos: 'ALL',
+          activo: true
+        };
+        localStorage.setItem('sneaker_user', JSON.stringify(devUser));
+        router.push('/');
+      }
+    } catch (e) {
+      // En caso de error, crear sesión local
+      const devUser = {
+        id: 'dev-001',
+        idCode: 'DEV',
+        nombre: 'Developer',
+        email: 'dev@localhost',
+        rol: 'MASTER 1' as const,
+        permisos: 'ALL',
+        activo: true
+      };
+      localStorage.setItem('sneaker_user', JSON.stringify(devUser));
+      router.push('/');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <div className="bg-[#111] border border-white/10 rounded-3xl p-8 shadow-2xl">
+          {/* Logo y Título */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/30">
+              <Terminal className="text-4xl" size={40} />
+            </div>
+            <h1 className="text-3xl font-black text-white uppercase tracking-tight">
+              The Sneaker Guys
+            </h1>
+            <p className="text-white/50 text-sm mt-2 font-medium">
+              Development Mode
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/20 border border-yellow-500/40 rounded-full">
+              <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
+              <span className="text-yellow-400 text-xs font-bold uppercase">Localhost</span>
+            </div>
+          </div>
+
+          {/* Botón Desarrollo */}
+          <button
+            type="button"
+            onClick={handleDevLogin}
+            disabled={isLoading}
+            className="w-full py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold uppercase tracking-widest transition-all border border-green-400/30 flex items-center justify-center gap-3"
+          >
+            {isLoading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <>
+                <Terminal size={20} />
+                Entrar en Modo Desarrollo
+              </>
+            )}
+          </button>
+
+          {/* Info */}
+          <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-xl">
+            <p className="text-white/50 text-xs text-center">
+              🔓 Login sin Google OAuth<br/>
+              <span className="text-white/30">Evita errores 403 en consola</span>
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 function LoginForm() {
   const [clientIdConfigured, setClientIdConfigured] = useState(false);
@@ -23,9 +127,19 @@ function LoginForm() {
   const router = useRouter();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('sneaker_user');
-    if (storedUser) {
-      router.push('/');
+    // Limpiar storage corrupto que puede causar errores de postMessage
+    try {
+      const storedUser = localStorage.getItem('sneaker_user');
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        if (parsed && parsed.email) {
+          router.push('/');
+        } else {
+          localStorage.removeItem('sneaker_user');
+        }
+      }
+    } catch (e) {
+      localStorage.removeItem('sneaker_user');
     }
   }, [router]);
 
@@ -127,6 +241,29 @@ function LoginForm() {
             </div>
           )}
 
+          {/* Dev Bypass - Siempre visible en desarrollo */}
+          {process.env.NODE_ENV !== 'production' && (
+            <button
+              type="button"
+              onClick={() => {
+                const devUser = {
+                  id: 'dev-001',
+                  idCode: 'DEV',
+                  nombre: 'Developer',
+                  email: 'dev@localhost',
+                  rol: 'MASTER 1' as const,
+                  permisos: 'ALL',
+                  activo: true
+                };
+                localStorage.setItem('sneaker_user', JSON.stringify(devUser));
+                router.push('/');
+              }}
+              className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all border border-white/10"
+            >
+              🔓 Modo Desarrollo - Entrar Directo
+            </button>
+          )}
+
           {/* Botón Google OAuth - Flujo 100% automático */}
           <div className="space-y-4">
             {!clientIdConfigured ? (
@@ -149,6 +286,7 @@ function LoginForm() {
                   size="large"
                   text="signin_with"
                   shape="rectangular"
+                  ux_mode="popup"
                 />
               </div>
             )}
@@ -175,6 +313,12 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  // En desarrollo: mostrar botón de bypass (sin Google OAuth para evitar 403)
+  if (IS_DEV) {
+    return <DevLoginForm />;
+  }
+  
+  // En producción: cargar Google OAuth normalmente
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <LoginForm />

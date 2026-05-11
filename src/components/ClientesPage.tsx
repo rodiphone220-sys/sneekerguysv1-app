@@ -279,7 +279,7 @@ function CustomerModal({ customer, onClose, onSave }: CustomerModalProps) {
         tipo_de_pago: formData.tipo_de_pago,
       };
 
-      const response = await fetch('/api/clientes/add', {
+      const response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

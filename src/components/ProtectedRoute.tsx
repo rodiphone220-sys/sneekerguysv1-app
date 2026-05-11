@@ -9,6 +9,8 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
+const BYPASS_AUTH = process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true';
+
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
@@ -20,7 +22,20 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     if (!isLoading && !user && mounted) {
-      router.push('/login');
+      if (BYPASS_AUTH) {
+        const devUser = {
+          id: 'dev-001',
+          idCode: 'DEV',
+          nombre: 'Developer Bypass',
+          email: 'dev@localhost',
+          rol: 'MASTER 1' as const,
+          permisos: 'ALL',
+          activo: true
+        };
+        localStorage.setItem('sneaker_user', JSON.stringify(devUser));
+      } else {
+        router.push('/login');
+      }
     }
   }, [user, isLoading, router, mounted]);
 

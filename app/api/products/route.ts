@@ -17,115 +17,116 @@ const parseSheetNumber = (val: any) => {
   return parseFloat(val.toString().trim().replace(/[$\s]/g, '').replace(/,/g, '').replace(/\((.*)\)/, '-$1')) || 0;
 };
 
+// =====================================================
+// MAPEO EXACTO DE 38 COLUMNAS (A a AL)
+// =====================================================
+// Índice = Letra - 1 (A=0, B=1, ..., AL=37)
 const mapProductToRow = (product: any): any[] => {
   const today = new Date().toISOString().split('T')[0];
   const sku = product.sku_manual || product.sku || product.id || '';
   
-  // Manejar imageUrl: preservar URLs de Drive, usar marcador para base64 local
+  // Calcular COSTO_MXN (Col S = índice 18)
+  const costoMxn = product.buyPriceMxn || 0;
+  
+  // Calcular UTILIDAD_BRUTA (Col U = índice 20)
+  const utilidadBruta = product.sellPriceMxn 
+    ? product.sellPriceMxn - (product.buyPriceMxn || 0)
+    : 0;
+  
+  // Manejar imageUrl
   let imageLink = product.imageUrl || '';
   if (imageLink.startsWith('data:image')) {
-    // Es base64 local - marcar como imagen subida
     imageLink = '📷 Imagen cargada desde dispositivo';
   } else if (imageLink.includes('drive.google.com')) {
-    // Es URL de Drive - usarla directamente
-    // Ya está lista para mostrar
+    // URL de Drive - mantener
   } else if (imageLink.length > 49000) {
-    // Limitar URLs largas
     imageLink = imageLink.substring(0, 49000) + '...';
   }
-  
+
+  // Array exacto de 38 posiciones (0-37)
   return [
-    sku, // A: ID_UNICO
-    today, // B: FECHA_REGISTRO
-    sku, // C: NUMERO_PEDIDO
-    product.clientName || 'STOCK', // D: CLIENTE
-    product.clientEmail || '', // E: CLIENTE_EMAIL
-    product.clientPhone || '', // F: CLIENTE_TELEFONO
-    product.clientAddress || '', // G: CLIENTE_DIRECCION
-    product.referenciado_por || '', // H: REFERENCIADO_POR
-    product.metodo_pago_cliente || '', // I: METODO_PAGO_CLIENTE
-    product.name || '', // J: ARTICULO_DETALLE (Modelo/Nombre)
-    product.category || '', // K: CATEGORIA
-    product.boutique || '', // L: BOUTIQUE_ORIGEN
-    imageLink, // M: LINK_CARPETA_IMAGENES
-    product.origen_articulo || product.tipo_compra || '', // N: TIPO_COMPRA (NACIONAL/FRONTERA/USA)
-    product.buyPriceUsd || 0, // O: COSTO_USD
-    product.exchangeRate || 18, // P: TIPO_CAMBIO
-    product.buyPriceMxn || 0, // Q: COSTO_MXN
-    product.sellPriceMxn || 0, // R: PRECIO_VENTA_MXN
-    parseSheetNumber(product.sellPriceMxn) - parseSheetNumber(product.buyPriceMxn), // S: UTILIDAD_BRUTA
-    product.costo_envio_usa || 0, // T: COSTO_ENVIO_USA
-    product.estado_envio_usa || '', // U: ESTADO_ENVIO_USA
-    product.estado_entrega_usa || '', // V: ESTADO_ENTREGA_USA
-    product.ubicacion_actual || '', // W: UBICACION_ACTUAL
-    product.fecha_ingreso_zafiro || '', // X: FECHA_INGRESO_ZAFIRO
-    product.incluido_en_corte_zafiro || 'NO', // Y: INCLUIDO_EN_CORTE_ZAFIRO
-    product.estado_entrega_mx || '', // Z: ESTADO_ENTREGA_MX
-    product.fecha_entrega_cliente || '', // AA: FECHA_ENTREGA_CLIENTE
-    product.anticipo_abonado || 0, // AB: ANTICIPO_ABONADO
-    product.total_pagado || 0, // AC: TOTAL_PAGADO
-    product.saldo_pendiente || 0, // AD: SALDO_PENDIENTE
-    product.abonado_amex || 0, // AE: ABONADO_AMEX
-    product.utilidad_tomada || 0, // AF: UTILIDAD_TOMADA
-    product.revisado_rodrigo || 'NO', // AG: REVISADO_RODRIGO
-    product.notes || product.internal_notes || '', // AH: OBSERVACIONES_NOTAS
-    product.currentStatus || 'COMPRADO', // AI: ULTIMO_STATUS_NOTIFICADO
-    product.totalBuyPriceUsd || product.buyPriceUsd || 0, // AJ: TOTAL_COSTO_USD
-    product.totalBuyPriceMxn || product.buyPriceMxn || 0, // AK: TOTAL_COSTO_MXN
-    product.payment_card || '', // AN: TARJETA_PAGO
-    product.brand || '', // AO: SUBCATEGORIA (Marca)
-    product.size || '', // AP: TALLA
-    product.color_description || '', // AQ: COLOR
-    product.gender || '', // AR: TAGS (Género)
+    sku,                          // [0] A: ID_UNICO
+    today,                        // [1] B: FECHA_REGISTRO
+    sku,                          // [2] C: NUMERO_PEDIDO
+    product.clientName || 'STOCK', // [3] D: CLIENTE_NOMBRE
+    product.clientEmail || '',    // [4] E: CLIENTE_EMAIL
+    product.clientPhone || '',     // [5] F: CLIENTE_TELEFONO
+    product.referido_por || '',   // [6] G: REFERIDO_POR
+    product.metodo_pago_cliente || '', // [7] H: METODO_PAGO_CLIENTE
+    product.name || '',            // [8] I: ARTICULO_MODELO
+    product.category || '',        // [9] J: CATEGORIA
+    product.boutique || '',       // [10] K: BOUTIQUE_ORIGEN
+    imageLink,                     // [11] L: LINK_IMAGENES
+    product.origen_articulo || '', // [12] M: ORIGEN_ARTICULO
+    product.buyPriceUsd || 0,     // [13] N: COSTO_USD
+    product.exchangeRate || 18,   // [14] O: TIPO_CAMBIO
+    product.buyPriceMxn || 0,     // [15] P: COSTO_ENVIO_USA
+    product.sellPriceMxn || 0,    // [16] Q: PRECIO_VENTA
+    product.currentStatus || '',  // [17] R: STATUS
+    costoMxn,                     // [18] S: COSTO_MXN
+    '',                           // [19] T: (reservado)
+    utilidadBruta,                // [20] U: UTILIDAD_BRUTA
+    '',                           // [21] V: (reservado)
+    product.clientAddress || '',  // [22] W: UBICACION_DESTINO
+    '',                           // [23] X: (reservado)
+    '',                           // [24] Y: (reservado)
+    '',                           // [25] Z: (reservado)
+    '',                           // [26] AA: (reservado)
+    '',                           // [27] AB: (reservado)
+    '',                           // [28] AC: (reservado)
+    '',                           // [29] AD: (reservado)
+    '',                           // [30] AE: (reservado)
+    '',                           // [31] AF: (reservado)
+    '',                           // [32] AG: (reservado)
+    product.internal_notes || '', // [33] AH: OBSERVACIONES
+    product.payment_card || '',   // [34] AI: TARJETA_PAGO
+    '',                           // [35] AJ: (reservado)
+    '',                           // [36] AK: (reservado)
+    product.tags?.join(', ') || '', // [37] AL: TAGS
   ];
 };
 
+// =====================================================
+// LECTURA: MAPEO INVERSO DESDE SHEET (38 COLUMNAS)
+// =====================================================
 const mapRowToProduct = (row: any[], index: number): any => ({
+  // Campos esenciales para Dashboard y Stock Maestro
   id: `${row[0] || `r${index}`}-${index}`,
   originalId: row[0] || '',
-  sku: row[0] || '',
-  fecha_registro: row[1] || '',
-  numero_pedido: row[2] || '',
-  clientName: row[3] || '',
-  clientEmail: row[4] || '',
-  clientPhone: row[5] || '',
-  clientAddress: row[6] || '',
-  referenciado_por: row[7] || '',
-  metodo_pago_cliente: row[8] || '',
-  name: row[9] || '',
-  category: row[10] || '',
-  boutique: row[11] || '',
-  imageUrl: row[12] || '',
-  tipo_compra: row[13] || '',
-  origen_articulo: row[13] || '',
-  buyPriceUsd: parseSheetNumber(row[14]),
-  exchangeRate: parseSheetNumber(row[15]) || 18,
-  buyPriceMxn: parseSheetNumber(row[16]),
-  sellPriceMxn: parseSheetNumber(row[17]),
-  utilidad_bruta: parseSheetNumber(row[18]),
-  costo_envio_usa: parseSheetNumber(row[19]),
-  estado_envio_usa: row[20] || '',
-  estado_entrega_usa: row[21] || '',
-  ubicacion_actual: row[22] || '',
-  fecha_ingreso_zafiro: row[23] || '',
-  incluido_en_corte_zafiro: row[24] || 'NO',
-  estado_entrega_mx: row[25] || '',
-  fecha_entrega_cliente: row[26] || '',
-  anticipo_abonado: parseSheetNumber(row[27]),
-  total_pagado: parseSheetNumber(row[28]),
-  saldo_pendiente: parseSheetNumber(row[29]),
-  abonado_amex: parseSheetNumber(row[30]),
-  utilidad_tomada: parseSheetNumber(row[31]),
-  revisado_rodrigo: row[32] || 'NO',
-  notes: row[33] || '',
-  currentStatus: row[34] || 'COMPRADO',
-  totalBuyPriceUsd: parseSheetNumber(row[35]),
-  totalBuyPriceMxn: parseSheetNumber(row[36]),
-  brand: row[41] || '', // AO: SUBCATEGORIA
-  size: row[42] || '', // AP: TALLA
-  color_description: row[43] || '', // AQ: COLOR
-  gender: row[44] || '', // AR: TAGS
-  payment_card: row[40] || '', // AN: TARJETA_PAGO
+  sku: row[0] || '',                    // [0] A: ID_UNICO
+  name: row[8] || '',                  // [8] I: ARTICULO_MODELO
+  brand: row[40] || '',               // [40] AO: MARCA
+  category: row[9] || '',             // [9] J: CATEGORIA
+  currentStatus: row[21] || 'COMPRADO', // [21] V: STATUS (CRÍTICO para filtros)
+  quantity: 1,                         // Por defecto 1
+  minStock: 1,                        // Por defecto 1
+  
+  // Campos adicionales
+  fecha_registro: row[1] || '',         // [1] B: FECHA_REGISTRO
+  numero_pedido: row[2] || '',         // [2] C: NUMERO_PEDIDO
+  clientName: row[3] || '',            // [3] D: CLIENTE_NOMBRE
+  clientEmail: row[4] || '',           // [4] E: CLIENTE_EMAIL
+  clientPhone: row[5] || '',           // [5] F: CLIENTE_TELEFONO
+  referenciado_por: row[6] || '',      // [6] G: REFERIDO_POR
+  metodo_pago_cliente: row[7] || '',   // [7] H: METODO_PAGO_CLIENTE
+  boutique: row[10] || '',            // [10] K: BOUTIQUE_ORIGEN
+  imageUrl: row[11] || '',            // [11] L: LINK_IMAGENES
+  tipo_compra: row[12] || '',         // [12] M: ORIGEN_ARTICULO
+  buyPriceUsd: parseSheetNumber(row[13]), // [13] N: COSTO_USD
+  exchangeRate: parseSheetNumber(row[14]) || 18, // [14] O: TIPO_CAMBIO
+  buyPriceMxn: parseSheetNumber(row[15]), // [15] P: COSTO_ENVIO_USA
+  sellPriceMxn: parseSheetNumber(row[16]), // [16] Q: PRECIO_VENTA
+  costo_mxn: parseSheetNumber(row[18]), // [18] S: COSTO_MXN
+  estado_envio_usa: row[19] || '',    // [19] T: STATUS_ENTREGA
+  ubicacion_actual: row[20] || '',   // [20] U: UBICACION_ACTUAL
+  utilidad_bruta: parseSheetNumber(row[20]), // [20] U: UTILIDAD_BRUTA
+  clientAddress: row[22] || '',       // [22] W: UBICACION_DESTINO
+  notes: row[33] || '',               // [33] AH: OBSERVACIONES
+  payment_card: row[34] || '',        // [34] AI: TARJETA_PAGO
+  size: row[41] || '',                // [41] AP: TALLA
+  color_description: row[42] || '',   // [42] AQ: COLOR
+  gender: row[43] || '',              // [43] AR: GENERO
+  tags: row[37] ? row[37].split(',').map((t: string) => t.trim()).filter(Boolean) : [], // [37] AL: TAGS
 });
 
 export async function GET() {
@@ -133,7 +134,7 @@ export async function GET() {
     const auth = getAuthClient();
     if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
     const sheets = google.sheets('v4');
-    const response = await sheets.spreadsheets.values.get({ auth, spreadsheetId: SHEET_ID, range: "'MASTER_DATA'!A2:AR" });
+    const response = await sheets.spreadsheets.values.get({ auth, spreadsheetId: SHEET_ID, range: "'MASTER_DATA'!A2:AL" });
     const rows = response.data.values || [];
     const products = rows.map((row: any[], index: number) => mapRowToProduct(row, index));
     return Response.json(products);
@@ -183,7 +184,7 @@ export async function PUT(request: Request) {
     const getResponse = await sheets.spreadsheets.values.get({ 
       auth, 
       spreadsheetId: SHEET_ID, 
-      range: "'MASTER_DATA'!A2:AN" 
+      range: "'MASTER_DATA'!A2:AL" 
     });
     
     const rows = getResponse.data.values || [];
@@ -207,7 +208,7 @@ export async function PUT(request: Request) {
     }
     
     const row = mapProductToRow(productData);
-    const updateRange = `'MASTER_DATA'!A${rowIndex}:AN`;
+    const updateRange = `'MASTER_DATA'!A${rowIndex}:AL`;
     
     await sheets.spreadsheets.values.update({
       auth,

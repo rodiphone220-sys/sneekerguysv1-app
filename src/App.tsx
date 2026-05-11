@@ -124,6 +124,26 @@ export default function App() {
 
   useEffect(() => {
     const verifyUser = async () => {
+      // BYPASS DE EMERGENCIA: En desarrollo, auto-login como admin
+      const isDev = process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_BYPASS_AUTH === 'true';
+      
+      if (isDev) {
+        const devUser = {
+          id: 'admin-dev-001',
+          idCode: 'ADMIN001',
+          nombre: 'ADMIN DEV',
+          email: 'admin@sneekerguy.com',
+          rol: 'MASTER 1' as const,
+          permisos: 'TODOS',
+          activo: true
+        };
+        localStorage.setItem('sneaker_user', JSON.stringify(devUser));
+        setUser(devUser);
+        setIsAuthenticated(true);
+        setIsAuthLoading(false);
+        return;
+      }
+
       const storedUser = localStorage.getItem('sneaker_user');
       
       if (!storedUser) {

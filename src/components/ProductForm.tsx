@@ -960,6 +960,19 @@ export function ProductForm({
                           className="w-full px-5 py-4 border border-brand-border rounded-2xl outline-none focus:border-brand-ink transition-all text-sm font-bold bg-white"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-brand-label uppercase tracking-widest italic flex items-center justify-between">
+                          7. Etiquetas / Tags
+                          <span className="text-[9px] font-medium text-brand-muted lowercase">#hashtags</span>
+                        </label>
+                        <input 
+                          type="text" 
+                          value={currentItem.tags?.join(', ') || ''}
+                          onChange={e => updateItem(activeItemIndex, { tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
+                          placeholder="Limited Edition, Special Box, OG..."
+                          className="w-full px-5 py-4 border border-brand-border rounded-2xl outline-none focus:border-brand-ink transition-all text-sm font-bold bg-white"
+                        />
+                      </div>
                     </div>
 
                     <div className="pt-6 border-t border-brand-border space-y-4">
@@ -1289,7 +1302,7 @@ function NewCustomerModal({ onClose, onSave }: NewCustomerModalProps) {
         tipo_de_pago: formData.tipo_de_pago,
       };
 
-      const response = await fetch('/api/clientes/add', {
+      const response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
