@@ -56,3 +56,43 @@ export function getProxyImageUrl(url: string | undefined): string {
   return url;
 }
 
+// =====================================================
+// MAPEO DE STATUS LOGÍSTICA: Código <-> Label
+// =====================================================
+export const STATUS_LOGISTICS_MAP: Record<string, string> = {
+  'COMPRADO': 'Comprado en USA',
+  'EN_RUTA': 'En Ruta a Zafi',
+  'EN_BODEGA': 'Recibido en Zafi',
+  'ENVIADO': 'Enviado a México',
+  'ENTREGADO': 'Entregado',
+};
+
+export const STATUS_LOGISTICS_REVERSE: Record<string, string> = {
+  'Comprado en USA': 'COMPRADO',
+  'En Ruta a Zafi': 'EN_RUTA',
+  'Recibido en Zafi': 'EN_BODEGA',
+  'Enviado a México': 'ENVIADO',
+  'Entregado': 'ENTREGADO',
+};
+
+// Convierte código (COMPRADO) a label (Comprado en USA)
+export function statusCodeToLabel(code: string): string {
+  return STATUS_LOGISTICS_MAP[code] || code;
+}
+
+// Convierte label (Comprado en USA) a código (COMPRADO)
+export function statusLabelToCode(label: string): string {
+  return STATUS_LOGISTICS_REVERSE[label] || label;
+}
+
+// Limpia strings monetarios: "$2,289.00" -> 2289
+export function cleanMonetaryString(value: any): number {
+  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === 'number') return value;
+  const cleaned = String(value)
+    .replace(/[$\s]/g, '')
+    .replace(/,/g, '')
+    .replace(/\((.*)\)/, '-$1');
+  return parseFloat(cleaned) || 0;
+}
+

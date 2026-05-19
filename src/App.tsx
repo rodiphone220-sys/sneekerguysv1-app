@@ -123,6 +123,7 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isControlOpen, setIsControlOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<{ id: string; status: string } | null>(null);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -339,7 +340,7 @@ export default function App() {
       default:
         return filtered;
     }
-  }, [products, searchQuery, statusFilter, activeTab]);
+  }, [products, searchQuery, statusFilter, activeTab, selectedStatus]);
 
   const stats = React.useMemo(() => ({
     total: products.length,
@@ -414,8 +415,187 @@ export default function App() {
     }
   };
 
-  const handleStatusChange = (id: string, status: OrderStatus) => {
-    setProducts(products.map(p => p.id === id ? { ...p, currentStatus: status, updatedAt: new Date().toISOString() } : p));
+  // =====================================================
+  // CONFIGURACIÓN DE ESTATUS LOGÍSTICO
+  // =====================================================
+  const STATUS_FLOW: Record<string, string[]> = {
+    'COMPRADO': ['EN_RUTA'],
+    'EN_RUTA': ['EN_BODEGA'],
+    'EN_BODEGA': ['ENVIADO'],
+    'ENVIADO': ['ENTREGADO'],
+    'ENTREGADO': []
+  };
+
+  const STATUS_LOGISTICS_MAP: Record<string, string> = {
+    'COMPRADO': 'Comprado en USA',
+    'EN_RUTA': 'En Ruta a Zafi',
+    'EN_BODEGA': 'Recibido en Zafi',
+    'ENVIADO': 'Enviado a México',
+    'ENTREGADO': 'Entregado'
+  };
+
+  const getLocationByStatus = (status: string): string => {
+    const map: Record<string, string> = {
+      'COMPRADO': 'Bodega USA',
+      'EN_RUTA': 'En tránsito a Zafi',
+      'EN_BODEGA': 'Zafi Monterrey - Bodega',
+      'ENVIADO': 'En ruta a México',
+      'ENTREGADO': 'Entregado a cliente'
+    };
+    return map[status] || '';
+  };
+
+  const validateStatusTransition = (from: string, to: string): { valid: boolean; message?: string } => {
+    if (from === to) return { valid: true };
+    const allowed = STATUS_FLOW[from] || [];
+    if (!allowed.includes(to)) {
+      return { 
+        valid: false, 
+        message: `No puede cambiar de "${STATUS_LOGISTICS_MAP[from as OrderStatus]}" a "${STATUS_LOGISTICS_MAP[to as OrderStatus]}". Siguiente paso: ${allowed.map(s => STATUS_LOGISTICS_MAP[s]).join(' o ')}` 
+      };
+    }
+    return { valid: true };
+  };
+
+  const calculateStatusCounts = (productList: Product[]) => {
+    const counts: Record<string, number> = { COMPRADO: 0, EN_RUTA: 0, EN_BODEGA: 0, ENVIADO: 0, ENTREGADO: 0 };
+    productList.forEach(p => { if (counts[p.currentStatus] !== undefined) counts[p.currentStatus]++; });
+    return counts;
+  };
+
+  // =====================================================
+  // HANDLE STATUS CHANGE - IMPLEMENTACIÓN COMPLETA
+  // =====================================================
+  const handleStatusChange = async (productId: string, newStatus: string) => {
+    const originalProduct = products.find(p => p.id === productId);
+    if (!originalProduct) return;
+    
+    const originalStatus = originalProduct.currentStatus;
+    
+    // 1. Validar transición
+    const validation = validateStatusTransition(originalStatus, newStatus);
+    if (!validation.valid) {
+      setToast({ message: validation.message || 'Transición no permitida', type: 'error' });
+      return;
+    }
+    
+    // 1.5. Confirmación para estatus ENTREGADO
+    if (newStatus === 'ENTREGADO') {
+      setPendingStatusChange({ id: productId, status: newStatus });
+      return;
+    }
+    
+    // 2. Optimistic UI Update
+    setProducts(prev => prev.map(p => 
+      p.id === productId 
+        ? { ...p, currentStatus: newStatus as OrderStatus, updatedAt: new Date().toISOString() } 
+        : p
+    ));
+    
+    const newLocation = getLocationByStatus(newStatus);
+    
+    try {
+      // 3. Llamar API PUT
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...originalProduct,
+          currentStatus: newStatus,
+          ubicacion_actual: newLocation,
+          updatedAt: new Date().toISOString()
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
+      
+      // 4. Actualizar contadores
+      const newCounts = calculateStatusCounts(products.map(p => 
+        p.id === productId ? { ...p, currentStatus: newStatus as OrderStatus } : p
+      ));
+      
+      // 5. Manejar filtro activo
+      if (selectedStatus && selectedStatus !== newStatus) {
+        setToast({ message: `Producto movido a "${STATUS_LOGISTICS_MAP[newStatus as OrderStatus]}"`, type: 'success' });
+      } else {
+        setToast({ message: `✅ Estatus actualizado: ${STATUS_LOGISTICS_MAP[newStatus as OrderStatus]}`, type: 'success' });
+      }
+      
+    } catch (error: any) {
+      // Rollback en caso de error
+      setProducts(prev => prev.map(p => 
+        p.id === productId 
+          ? { ...p, currentStatus: originalStatus, updatedAt: originalProduct.updatedAt } 
+          : p
+      ));
+      setToast({ message: `❌ Error al actualizar: ${error.message}`, type: 'error' });
+    }
+    
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  // =====================================================
+  // EJECUTAR CAMBIO DE ESTATUS DESPUÉS DE CONFIRMACIÓN
+  // =====================================================
+  const executeStatusChange = async () => {
+    if (!pendingStatusChange) return;
+    
+    const { id: productId, status: newStatus } = pendingStatusChange;
+    const originalProduct = products.find(p => p.id === productId);
+    if (!originalProduct) {
+      setPendingStatusChange(null);
+      return;
+    }
+    
+    const originalStatus = originalProduct.currentStatus;
+    
+    // Optimistic UI Update
+    setProducts(prev => prev.map(p => 
+      p.id === productId 
+        ? { ...p, currentStatus: newStatus as OrderStatus, updatedAt: new Date().toISOString() } 
+        : p
+    ));
+    
+    const newLocation = getLocationByStatus(newStatus);
+    
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...originalProduct,
+          currentStatus: newStatus,
+          ubicacion_actual: newLocation,
+          updatedAt: new Date().toISOString()
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Error ${response.status}`);
+      }
+      
+      setToast({ message: `🎉 ¡Entrega completada! Producto marcado como "${STATUS_LOGISTICS_MAP[newStatus as OrderStatus]}"`, type: 'success' });
+      
+      // Remover de la vista si hay filtro activo
+      if (selectedStatus && selectedStatus !== newStatus) {
+        // El producto ya no coincide con el filtro
+      }
+      
+    } catch (error: any) {
+      setProducts(prev => prev.map(p => 
+        p.id === productId 
+          ? { ...p, currentStatus: originalStatus, updatedAt: originalProduct.updatedAt } 
+          : p
+      ));
+      setToast({ message: `❌ Error al actualizar: ${error.message}`, type: 'error' });
+    }
+    
+    setPendingStatusChange(null);
+    setTimeout(() => setToast(null), 4000);
   };
 
   const handleExport = () => {
@@ -934,6 +1114,48 @@ export default function App() {
           )}
 
           <Toast toast={toast} onClose={() => setToast(null)} />
+
+          {/* Modal de Confirmación para ESTADO ENTREGADO */}
+          {pendingStatusChange && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingStatusChange(null)} />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-green-500"
+              >
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <CheckCircle2 size={40} className="text-green-600" />
+                  </div>
+                  <h3 className="text-2xl font-black text-brand-ink mb-2">¿Confirmar Entrega?</h3>
+                  <p className="text-brand-muted mb-6">
+                    ¿Estás seguro de que el producto <span className="font-bold text-brand-ink">{products.find(p => p.id === pendingStatusChange.id)?.name}</span> ha sido entregado al cliente?
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-2">Detalles del producto:</p>
+                    <p className="text-sm font-semibold">{products.find(p => p.id === pendingStatusChange.id)?.name}</p>
+                    <p className="text-sm text-gray-600">SKU: {products.find(p => p.id === pendingStatusChange.id)?.sku}</p>
+                    <p className="text-sm text-gray-600">Cliente: {products.find(p => p.id === pendingStatusChange.id)?.clientName || 'STOCK'}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setPendingStatusChange(null)}
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm border-2 border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      onClick={executeStatusChange}
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-green-500 text-white hover:bg-green-600 transition-all shadow-lg shadow-green-500/30"
+                    >
+                      Confirmar Entrega ✅
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
 
           {!isLoading && activeTab === 'orders' && (
             <div className="bg-brand-surface border border-brand-border rounded-xl shadow-sm overflow-hidden overflow-x-auto scrollbar-hide">

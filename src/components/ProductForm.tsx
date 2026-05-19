@@ -111,7 +111,10 @@ export function ProductForm({
   product, onSave, onClose, exchangeRate: initialExchangeRate = 18.00,
   customers = [], boutiques = [], masterCategories = [], globalMarkup: initialGlobalMarkup = 30, onRefresh
 }: ProductFormProps) {
-  const [commonData, setCommonData] = useState({
+  const [commonData, setCommonData] = useState<{
+    destination: string; exchangeRate: number; sku_manual: string;
+    internal_notes: string; boutique: string; payment_card: string; origen_articulo: string; moneda_compra: 'USD' | 'MXN'
+  }>({
     destination: 'MEXICO', exchangeRate: initialExchangeRate, sku_manual: '',
     internal_notes: '', boutique: '', payment_card: '', origen_articulo: 'USA', moneda_compra: 'USD',
   });
@@ -132,7 +135,9 @@ export function ProductForm({
   const [globalMarkup, setGlobalMarkup] = useState(initialGlobalMarkup);
   const [showOCRModal, setShowOCRModal] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState('');
-  const [ocrModalData, setOcrModalData] = useState({
+  const [ocrModalData, setOcrModalData] = useState<{
+    category: string; brand: string; name: string; gender: string; color_description: string; size: string; buyPriceUsd: number; moneda_compra: 'USD' | 'MXN'
+  }>({
     category: '', brand: '', name: '', gender: 'UNISEX', color_description: '', size: '', buyPriceUsd: 0, moneda_compra: 'USD'
   });
 
@@ -192,7 +197,7 @@ export function ProductForm({
         color_description: ocrData.color_description, size: ocrData.size, buyPriceUsd: ocrData.buyPriceUsd,
         buyPriceMxn: Math.round((ocrData.buyPriceUsd || 0) * (commonData.exchangeRate)), imageUrl: base64Image
       });
-      setOcrModalData(ocrData); setModalImageUrl(base64Image); setShowOCRModal(true);
+      setOcrModalData({ ...ocrData, moneda_compra: (ocrData as any).moneda_compra === 'MXN' ? 'MXN' as const : 'USD' as const }); setModalImageUrl(base64Image); setShowOCRModal(true);
     } catch { } finally { setIsUploading(false); }
   };
 
@@ -279,11 +284,11 @@ export function ProductForm({
         // [2] C: STATUS_LOGISTICA
         currentStatus: item.currentStatus || 'Comprado en USA',
         // [3] D: UBICACION_ACTUAL (auto según status)
-        ubicacion_actual: item.ubicacion_actual || {
+        ubicacion_actual: item.ubicacion_actual || ({
           'Comprado en USA': 'Bodega USA', 'En Ruta a Zafi': 'En tránsito a Zafi',
           'Recibido en Zafi': 'Zafi Monterrey', 'Enviado a México': 'En ruta a México',
           'Entregado': 'Entregado a cliente'
-        }[item.currentStatus] || 'Bodega USA',
+        } as Record<string, string>)[item.currentStatus] || 'Bodega USA',
         // [4] E: TAGS
         tags: item.tags || [],
         // [5] F: PUBLICAR_VITRINA
@@ -570,7 +575,7 @@ export function ProductForm({
                       <div className="flex-1">
                         <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest block mb-2">Origen (Moneda)</label>
                         <div className="flex gap-2">
-                          {[{ id: 'NACIONAL', emoji: '🇲🇽', currency: 'MXN' }, { id: 'USA', emoji: '🇺🇸', currency: 'USD' }].map(orig => (
+                          {[{ id: 'NACIONAL', emoji: '🇲🇽', currency: 'MXN' as const }, { id: 'USA', emoji: '🇺🇸', currency: 'USD' as const }].map(orig => (
                             <button key={orig.id} type="button" onClick={() => setCommonData({ ...commonData, origen_articulo: orig.id, moneda_compra: orig.currency })}
                               className={`flex-1 px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all ${commonData.origen_articulo === orig.id ? 'bg-brand-accent text-white shadow-lg' : 'bg-white border-2 border-brand-border text-brand-muted hover:border-brand-ink'}`}>
                               {orig.emoji} {orig.id}
