@@ -266,6 +266,18 @@ export function ProductForm({
     } catch { } finally { setIsUploading(false); }
   };
 
+  // Helper para obtener ubicación por status
+  const getUbicacionByStatus = (status: string): string => {
+    const map: Record<string, string> = {
+      'Comprado en USA': 'Bodega USA',
+      'En Ruta a Zafi': 'En tránsito a Zafi',
+      'Recibido en Zafi': 'Zafi Monterrey',
+      'Enviado a México': 'En ruta a México',
+      'Entregado': 'Entregado a cliente'
+    };
+    return map[status] || 'Bodega USA';
+  };
+
   // ✅ handleSubmit CORREGIDO - 29 columnas MASTER_DATA
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,11 +296,7 @@ export function ProductForm({
         // [2] C: STATUS_LOGISTICA
         currentStatus: item.currentStatus || 'Comprado en USA',
         // [3] D: UBICACION_ACTUAL (auto según status)
-        ubicacion_actual: item.ubicacion_actual || ({
-          'Comprado en USA': 'Bodega USA', 'En Ruta a Zafi': 'En tránsito a Zafi',
-          'Recibido en Zafi': 'Zafi Monterrey', 'Enviado a México': 'En ruta a México',
-          'Entregado': 'Entregado a cliente'
-        } as Record<string, string>)[item.currentStatus] || 'Bodega USA',
+        ubicacion_actual: item.ubicacion_actual || getUbicacionByStatus(item.currentStatus),
         // [4] E: TAGS
         tags: item.tags || [],
         // [5] F: PUBLICAR_VITRINA
