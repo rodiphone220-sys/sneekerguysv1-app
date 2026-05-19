@@ -66,6 +66,7 @@ const mapRowToProduct = (row: any[], index: number): any => {
   const utilidadBruta = precioVentaMxn - costoMxn; // AC: UTILIDAD_BRUTA
 
   let imageLink = row[19] || ''; // T: LINK_IMAGENES
+  console.log('🔍 DEBUG imageLink - row[19]:', JSON.stringify(row[19]), 'tipo:', typeof row[19]);
   if (imageLink.startsWith('data:image')) {
     imageLink = '📷 Imagen cargada desde dispositivo';
   }

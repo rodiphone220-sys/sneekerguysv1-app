@@ -22,6 +22,18 @@ export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange
     ? product.sellPriceMxn 
     : Math.round((product.buyPriceMxn || 0) * (1 + (globalMarkup / 100)));
 
+  // Debug imageUrl
+  const imageProxyUrl = getProxyImageUrl(product.imageUrl);
+  if (product.imageUrl) {
+    console.log('🖼️ ProductCard Debug:', {
+      sku: product.sku,
+      originalImageUrl: product.imageUrl,
+      proxyImageUrl: imageProxyUrl,
+      startsWithHttp: product.imageUrl.startsWith('http'),
+      startsWithData: product.imageUrl.startsWith('data:'),
+    });
+  }
+
   React.useEffect(() => {
     if (justUpdated) {
       const timer = setTimeout(() => setJustUpdated(false), 2000);

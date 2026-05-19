@@ -40,15 +40,34 @@ const parseAmount = (value: any): number => {
 
 const uploadImageToDrive = async (base64Image: string, productId?: string): Promise<string | null> => {
   try {
+    // ✅ Cloudinary espera FormData, no JSON
+    const formData = new FormData();
+    
+    // Convertir base64 a Blob para subir
+    const base64Response = await fetch(base64Image);
+    const blob = await base64Response.blob();
+    formData.append('file', blob, `${productId || 'image'}.jpg`);
+
     const res = await fetch('/api/upload-image', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: base64Image, productId: productId || `PROD-${Date.now()}` })
+      body: formData
+      // ✅ NO incluir Content-Type header: el navegador lo maneja con FormData
     });
+    
     const data = await res.json();
-    if (data.success && data.viewLink) return data.viewLink;
+    
+    // ✅ Cloudinary devuelve 'url', no 'viewLink'
+    if (data.success && data.url) {
+      console.log('🖼️ Upload exitoso a Cloudinary:', data.url);
+      return data.url;
+    }
+    
+    console.warn('⚠️ Upload falló o sin URL:', data);
     return null;
-  } catch { return null; }
+  } catch (error) {
+    console.error('❌ Error uploading to Cloudinary:', error);
+    return null;
+  }
 };
 
 const compressImage = (base64: string, maxWidth = 400): Promise<string> => {
@@ -195,7 +214,8 @@ export function ProductForm({
       updateItem(activeItemIndex, {
         name: ocrData.name, brand: ocrData.brand, category: ocrData.category, gender: ocrData.gender,
         color_description: ocrData.color_description, size: ocrData.size, buyPriceUsd: ocrData.buyPriceUsd,
-        buyPriceMxn: Math.round((ocrData.buyPriceUsd || 0) * (commonData.exchangeRate)), imageUrl: base64Image
+        buyPriceMxn: Math.round((ocrData.buyPriceUsd || 0) * (commonData.exchangeRate))
+        // ✅ imageUrl NO se actualiza aquí, se mantiene la URL de Cloudinary
       });
       setOcrModalData({ ...ocrData, moneda_compra: (ocrData as any).moneda_compra === 'MXN' ? 'MXN' as const : 'USD' as const }); setModalImageUrl(base64Image); setShowOCRModal(true);
     } catch { } finally { setIsUploading(false); }
@@ -259,11 +279,29 @@ export function ProductForm({
         base64 = await compressImage(base64);
         const productId = items[idx]?.sku || `PROD-${Date.now()}`;
         const driveUrl = await uploadImageToDrive(base64, productId);
-        updateItem(idx, { imageUrl: driveUrl || base64 });
-        scanImageWithAI(base64);
+        
+        // ✅ DEBUG: Ver qué está pasando con la imagen
+        const finalUrl = driveUrl || base64;
+        console.log('🖼️ IMAGE UPLOAD DEBUG:', {
+          fileSize: file.size,
+          fileType: file.type,
+          base64Length: base64.length,
+          compressed: base64.length < 2000000 ? 'OK' : 'TOO_LARGE',
+          driveUrl: driveUrl ? 'SUCCESS' : 'FAILED',
+          finalUrlType: finalUrl.startsWith('data:') ? 'base64' : finalUrl.startsWith('http') ? 'http' : 'unknown',
+          finalUrlPreview: finalUrl.slice(0, 100) + '...'
+        });
+        
+        updateItem(idx, { imageUrl: finalUrl });
+        // ✅ OCR siempre usa base64 (no la URL de Cloudinary)
+        if (base64) {
+          scanImageWithAI(base64);
+        }
       };
       reader.readAsDataURL(file);
-    } catch { } finally { setIsUploading(false); }
+    } catch (err) {
+      console.error('❌ Image upload error:', err);
+    } finally { setIsUploading(false); }
   };
 
   // Helper para obtener ubicación por status

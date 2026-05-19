@@ -49,10 +49,24 @@ export function exportToCSV(data: any[], filename: string) {
 }
 
 export function getProxyImageUrl(url: string | undefined): string {
-  if (!url) return '';
+  if (!url) return '/placeholder-image.png';
+  
+  // ✅ Base64: devolver tal cual (funciona en preview local)
+  if (url.startsWith('data:image')) {
+    return url;
+  }
+  
+  // ✅ Cloudinary: URLs directas, sin proxy necesario
+  if (url.includes('res.cloudinary.com') || url.includes('cloudinary.com')) {
+    return url;
+  }
+  
+  // ✅ Google Drive: usar proxy para evitar CORS
   if (url.includes('drive.google.com') || url.includes('googledrive.com')) {
     return `/api/proxy-image?url=${encodeURIComponent(url)}`;
   }
+  
+  // ✅ Otras URLs directas (imgur, etc.)
   return url;
 }
 
