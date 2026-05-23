@@ -533,8 +533,9 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Transaction Detail Table */}
+      {/* Transaction Detail Table */}
         {(() => {
           const txProducts = selectedCard === 'TODAS'
             ? baseFilteredProducts
