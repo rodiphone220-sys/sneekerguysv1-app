@@ -24,10 +24,22 @@ interface ProductFormProps {
   onRefresh?: () => void;
 }
 
-const CATEGORIES = ['CALZADO', 'ACCESORIOS', 'STREETWEAR', 'COLECCIONABLES', 'OTROS'];
+const CATEGORIES = [
+  'CALZADO DE DISEÑADOR - HOMBRE',
+  'CALZADO DE DISEÑADOR - MUJER',
+  'CALZADO DEPORTIVO - HOMBRE',
+  'CALZADO DEPORTIVO - MUJER',
+  'PLAYERAS - HOMBRE',
+  'PLAYERAS - MUJER',
+  'PANTALONES',
+  'CHAMARRAS Y HOODIES',
+  'ACCESORIOS',
+  'COLECCIONABLES',
+  'OTROS',
+];
 const GENDERS = ['HOMBRE', 'MUJER', 'UNISEX', 'KIDS'];
 const LOGISTICS_STATUS = ['Comprado en USA', 'En Ruta a Zafi', 'Recibido en Zafi', 'Enviado a México', 'Entregado'];
-const CARD_TYPES = ['AMEX CORPORATE', 'VISA BUSINESS', 'MASTERCARD BLACK', 'CITI PREMIER', 'EFECTIVO', 'TRANSFERENCIA', 'OTRO'];
+const CARD_TYPES = ['AMEX AZUL', 'AMEX ALEX', 'SANTANDER', 'INVEX', 'NU'];
 
 const getRuntimeEnv = () => (window as any).__ENV__ || {};
 
@@ -134,12 +146,12 @@ export function ProductForm({
     destination: string; exchangeRate: number; sku_manual: string;
     internal_notes: string; boutique: string; payment_card: string; origen_articulo: string; moneda_compra: 'USD' | 'MXN'
   }>({
-    destination: 'MEXICO', exchangeRate: initialExchangeRate, sku_manual: '',
+    destination: 'EL PASO', exchangeRate: initialExchangeRate, sku_manual: '',
     internal_notes: '', boutique: '', payment_card: '', origen_articulo: 'USA', moneda_compra: 'USD',
   });
 
   const [items, setItems] = useState<any[]>(product ? [product] : [{
-    id: Date.now(), name: '', brand: '', category: 'CALZADO', gender: 'UNISEX',
+    id: Date.now(), name: '', brand: '', category: 'CALZADO DE DISEÑADOR - HOMBRE', gender: 'UNISEX',
     color_description: '', size: '', buyPriceUsd: 0, buyPriceMxn: 0, sellPriceMxn: 0,
     quantity: 1, imageUrl: '', currentStatus: 'Comprado en USA', isShowcase: true,
     clientName: '', clientEmail: '', clientPhone: '', clientAddress: '', clientIg: '',
@@ -247,7 +259,7 @@ export function ProductForm({
 
   const addItem = () => {
     setItems([...items, {
-      id: Date.now(), name: '', brand: '', category: 'CALZADO', gender: 'UNISEX', color_description: '', size: '',
+      id: Date.now(), name: '', brand: '', category: 'CALZADO DE DISEÑADOR - HOMBRE', gender: 'UNISEX', color_description: '', size: '',
       buyPriceUsd: 0, buyPriceMxn: 0, sellPriceMxn: 0, quantity: 1, imageUrl: '', currentStatus: 'Comprado en USA',
       isShowcase: true, clientName: '', clientEmail: '', clientPhone: '', clientAddress: '', clientIg: '',
       ciudad_estado: '', referido_por: '', metodo_pago_cliente: 'Efectivo/Transferencia', tags: []
@@ -354,7 +366,7 @@ export function ProductForm({
         // [12] M: OBSERVACIONES
         notes: commonData.internal_notes || '', internal_notes: commonData.internal_notes || '',
         // [13] N: CATEGORIA
-        category: item.category || 'CALZADO',
+        category: item.category || 'CALZADO DE DISEÑADOR - HOMBRE',
         // [14] O: MARCA
         brand: item.brand || '',
         // [15] P: ARTICULO_MODELO
@@ -386,6 +398,7 @@ export function ProductForm({
         // [28] AC: UTILIDAD_BRUTA
         utilidad_bruta: (Number(item.sellPriceMxn) || 0) - (Number(item.buyPriceMxn) || 0),
         // Metadata
+        destino: commonData.destination,
         createdAt: new Date().toISOString().split('T')[0], updatedAt: new Date().toISOString().split('T')[0],
         quantity: Number(item.quantity) || 1,
       };
@@ -477,7 +490,7 @@ export function ProductForm({
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted" size={16} />
                     <select value={commonData.destination} onChange={e => setCommonData({ ...commonData, destination: e.target.value })}
                       className="w-full pl-12 pr-4 py-3 bg-white border border-brand-border rounded-xl text-sm font-bold appearance-none outline-none focus:border-brand-ink">
-                      <option value="MEXICO">MEXICO</option><option value="USA">USA</option><option value="CANADA">CANADA</option><option value="OTRO">OTRO</option>
+                      <option value="DALLAS">DALLAS</option><option value="EL PASO">EL PASO</option><option value="MEXICO">MEXICO</option>
                     </select>
                   </div>
                 </div>
@@ -889,7 +902,7 @@ function NewCustomerModal({ onClose, onSave }: { onClose: () => void; onSave: (c
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2"><label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-2">Nombre Completo</label><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={16} /><input type="text" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 pl-11 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink" placeholder="Juan Pérez" /></div></div>
-            <div className="col-span-2"><label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-2">WhatsApp</label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={16} /><input type="tel" required value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 pl-11 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink" placeholder="5512345678" /></div></div>
+            <div className="col-span-2"><label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-2">WhatsApp</label><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={16} /><input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 pl-11 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink" placeholder="5512345678" /></div></div>
             <div className="col-span-2"><label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-2">Email</label><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={16} /><input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 pl-11 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink" placeholder="juan@email.com" /></div></div>
             <div className="col-span-2"><label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-2">📍 Ciudad / Estado</label><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={16} /><input type="text" required value={formData.ciudad_estado} onChange={e => setFormData({ ...formData, ciudad_estado: e.target.value })} className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 pl-11 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink" placeholder="Ciudad de México, CDMX" /></div></div>
             <div className="col-span-2"><label className="block text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-2">📸 Instagram</label><input type="text" value={formData.ig_handle} onChange={e => setFormData({ ...formData, ig_handle: e.target.value })} className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 px-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink" placeholder="@usuario" /></div>

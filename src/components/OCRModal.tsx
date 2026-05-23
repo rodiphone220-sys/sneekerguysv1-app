@@ -27,7 +27,19 @@ interface OCRModalProps {
   totalItems: number;
 }
 
-const CATEGORIES = ['CALZADO', 'ACCESORIOS', 'STREETWEAR', 'COLECCIONABLES', 'OTROS'];
+const CATEGORIES = [
+  'CALZADO DE DISEÑADOR - HOMBRE',
+  'CALZADO DE DISEÑADOR - MUJER',
+  'CALZADO DEPORTIVO - HOMBRE',
+  'CALZADO DEPORTIVO - MUJER',
+  'PLAYERAS - HOMBRE',
+  'PLAYERAS - MUJER',
+  'PANTALONES',
+  'CHAMARRAS Y HOODIES',
+  'ACCESORIOS',
+  'COLECCIONABLES',
+  'OTROS',
+];
 const GENDERS = ['HOMBRE', 'MUJER', 'UNISEX', 'KIDS'];
 
 export function OCRModal({ imageUrl, ocrData, isOpen, onClose, onSave, itemIndex, totalItems }: OCRModalProps) {

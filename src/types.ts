@@ -91,7 +91,7 @@ export interface Product {
   utilidad_tomada?: number;
   revisado_rodrigo?: string;
   currentStatus: OrderStatus;
-  destino?: 'EL PASO' | 'DALLAS' | 'DIRECTO A MEXICO';
+  destino?: 'EL PASO' | 'DALLAS' | 'MEXICO';
   isPaid?: boolean;
   isDelivered?: boolean;
   isReviewed?: boolean;

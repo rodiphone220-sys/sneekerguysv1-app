@@ -58,7 +58,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     currentStatus: 'ENTREGADO',
     clientName: 'Maria Garcia',
     boutique: 'GOAT',
-    destino: 'DIRECTO A MEXICO',
+    destino: 'MEXICO',
     imageUrl: 'https://picsum.photos/seed/shoes3/400/400',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

@@ -353,7 +353,6 @@ function CustomerModal({ customer, onClose, onSave }: CustomerModalProps) {
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" size={16} />
                 <input 
                   type="tel"
-                  required
                   value={formData.phone}
                   onChange={e => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full bg-brand-bg border border-white/10 rounded-lg py-2.5 pl-11 pr-4 focus:ring-1 focus:ring-brand-ink transition-all outline-none text-sm text-brand-ink"
