@@ -1949,6 +1949,17 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  const CATEGORIES = [
+    { value: 'Comida', icon: '🍽️', label: 'Comida' },
+    { value: 'Transporte', icon: '🚗', label: 'Transporte' },
+    { value: 'Ropa', icon: '👕', label: 'Ropa' },
+    { value: 'Salud', icon: '💊', label: 'Salud' },
+    { value: 'Ocio', icon: '🎮', label: 'Ocio' },
+    { value: 'Servicios', icon: '💡', label: 'Servicios' },
+    { value: 'Viajes', icon: '🧳', label: 'Viajes' },
+    { value: 'Otros', icon: '📌', label: 'Otros' },
+  ];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || Number(formData.amount) <= 0) return;
@@ -1974,53 +1985,65 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
           </h2>
           <button onClick={onClose} className="p-2 rounded-lg text-brand-muted hover:text-brand-ink hover:bg-brand-bg transition-colors"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Categoría</label>
-            <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}
-              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all">
-              <option value="Comida">Comida</option>
-              <option value="Ropa">Ropa</option>
-              <option value="Salud">Salud</option>
-              <option value="Ocio">Ocio</option>
-              <option value="Transporte">Transporte</option>
-              <option value="Servicios">Servicios</option>
-              <option value="Otros">Otros</option>
-            </select>
-          </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Monto (MXN)</label>
-            <input type="number" required min="1" step="0.01" value={formData.amount}
-              onChange={e => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all" placeholder="$0.00" />
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-brand-muted">$</span>
+              <input type="number" required min="1" step="0.01" value={formData.amount}
+                onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                className="w-full pl-10 pr-4 py-4 bg-brand-bg border-2 border-brand-border rounded-xl text-2xl font-black outline-none focus:border-amber-400 transition-all text-right" placeholder="0.00" />
+            </div>
           </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Concepto</label>
+            <input type="text" value={formData.description}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all" placeholder="Ej. Cena, Gasolina, Ropa..." />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Categoría</label>
+            <div className="grid grid-cols-4 gap-2">
+              {CATEGORIES.map(c => (
+                <button key={c.value} type="button" onClick={() => setFormData({ ...formData, category: c.value })}
+                  className={cn(
+                    "flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 transition-all",
+                    formData.category === c.value
+                      ? "border-amber-400 bg-amber-50 text-brand-ink"
+                      : "border-brand-border bg-brand-bg text-brand-muted hover:border-brand-ink/30"
+                  )}>
+                  <span className="text-lg">{c.icon}</span>
+                  <span className="text-[8px] font-bold uppercase tracking-widest">{c.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Tarjeta</label>
             <select value={formData.card} onChange={e => setFormData({ ...formData, card: e.target.value })}
-              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all">
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all">
               <option value="">Seleccionar</option>
-              <option value="AMEX AZUL">AMEX AZUL</option>
-              <option value="AMEX ALEX">AMEX ALEX</option>
-              <option value="SANTANDER">SANTANDER</option>
-              <option value="INVEX">INVEX</option>
-              <option value="NU">NU</option>
-              <option value="EFECTIVO">EFECTIVO</option>
+              <option value="AMEX AZUL">💳 AMEX AZUL</option>
+              <option value="AMEX ALEX">💳 AMEX ALEX</option>
+              <option value="SANTANDER">💳 SANTANDER</option>
+              <option value="INVEX">💳 INVEX</option>
+              <option value="NU">💳 NU</option>
+              <option value="EFECTIVO">💵 EFECTIVO</option>
             </select>
           </div>
+
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Fecha</label>
             <input type="date" value={formData.date}
               onChange={e => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all" />
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all" />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Descripción (opcional)</label>
-            <input type="text" value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all" placeholder="¿En qué lo gastaste?" />
-          </div>
+
           <button type="submit" disabled={isSaving || !formData.amount || Number(formData.amount) <= 0}
-            className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black text-sm rounded-xl transition-all uppercase tracking-widest">
+            className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black text-sm rounded-xl transition-all uppercase tracking-widest shadow-lg shadow-amber-500/20">
             {isSaving ? 'Guardando...' : 'Registrar Gasto Privado'}
           </button>
         </form>
