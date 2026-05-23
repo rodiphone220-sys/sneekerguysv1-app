@@ -405,6 +405,73 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
               No hay datos suficientes para mostrar el gráfico
             </div>
           )}
+          
+          {/* Investment Table by Category */}
+          <div className="mt-6 border-t border-brand-border pt-6">
+            <h4 className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-4">Desglose por Categoría</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-brand-border">
+                    <th className="text-left pb-2 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Categoría</th>
+                    <th className="text-right pb-2 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Monto (MXN)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-border/50">
+                  {(() => {
+                    const CATEGORY_LIST = [
+                      'CALZADO DE DISEÑADOR - HOMBRE',
+                      'CALZADO DE DISEÑADOR - MUJER',
+                      'CALZADO DEPORTIVO - HOMBRE',
+                      'CALZADO DEPORTIVO - MUJER',
+                      'PLAYERAS - HOMBRE',
+                      'PLAYERAS - MUJER',
+                      'PANTALONES',
+                      'CHAMARRAS Y HOODIES',
+                      'ACCESORIOS',
+                      'COLECCIONABLES',
+                      'OTROS',
+                    ];
+                    const fmt = (val: number) => val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
+                    const filteredForTable = selectedCard === 'TODAS'
+                      ? baseFilteredProducts
+                      : baseFilteredProducts.filter(p => p.payment_card === selectedCard);
+                    let total = 0;
+                    return CATEGORY_LIST.map(cat => {
+                      const amount = filteredForTable
+                        .filter(p => p.category === cat)
+                        .reduce((acc, p) => acc + (p.buyPriceMxn * (p.quantity || 1)), 0);
+                      total += amount;
+                      return (
+                        <tr key={cat} className="hover:bg-brand-bg/50 transition-colors">
+                          <td className="py-2.5 pr-4 font-bold text-brand-ink">{cat}</td>
+                          <td className={cn(
+                            "py-2.5 text-right font-mono font-bold",
+                            amount > 0 ? "text-brand-ink" : "text-brand-muted/50"
+                          )}>{fmt(amount)}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-brand-ink">
+                    <td className="pt-3 pr-4 font-black text-brand-ink uppercase tracking-wider text-[10px]">Total Consolidado</td>
+                    <td className="pt-3 text-right font-black font-mono text-brand-ink">
+                      {(() => {
+                        const fmt = (val: number) => val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
+                        const total = (selectedCard === 'TODAS'
+                          ? baseFilteredProducts
+                          : baseFilteredProducts.filter(p => p.payment_card === selectedCard)
+                        ).reduce((acc, p) => acc + (p.buyPriceMxn * (p.quantity || 1)), 0);
+                        return fmt(total);
+                      })()}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
         </div>
 
         {/* Global Distribution */}
