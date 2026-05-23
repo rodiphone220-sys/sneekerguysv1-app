@@ -12,6 +12,8 @@ import {
   Package,
   Calendar,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   X,
   CreditCard
 } from 'lucide-react';
@@ -45,6 +47,8 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState('TODAS');
+  const [txPage, setTxPage] = useState(1);
+  const TX_PER_PAGE = 10;
   
   const CARD_FILTERS = ['TODAS', 'AMEX AZUL', 'AMEX ALEX', 'SANTANDER', 'INVEX', 'NU'];
   
@@ -167,25 +171,25 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
                   <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Periodos Rápidos</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button 
-                      onClick={() => { setDateRange(getPresetRange('mes')); setShowDatePicker(false); }}
+                      onClick={() => { setDateRange(getPresetRange('mes')); setShowDatePicker(false); setTxPage(1); }}
                       className="px-3 py-2 text-xs font-bold text-brand-ink bg-brand-bg rounded-lg hover:bg-brand-ink hover:text-white transition-all"
                     >
                       Este Mes
                     </button>
                     <button 
-                      onClick={() => { setDateRange(getPresetRange('mes-anterior')); setShowDatePicker(false); }}
+                      onClick={() => { setDateRange(getPresetRange('mes-anterior')); setShowDatePicker(false); setTxPage(1); }}
                       className="px-3 py-2 text-xs font-bold text-brand-ink bg-brand-bg rounded-lg hover:bg-brand-ink hover:text-white transition-all"
                     >
                       Mes Anterior
                     </button>
                     <button 
-                      onClick={() => { setDateRange(getPresetRange('quincena')); setShowDatePicker(false); }}
+                      onClick={() => { setDateRange(getPresetRange('quincena')); setShowDatePicker(false); setTxPage(1); }}
                       className="px-3 py-2 text-xs font-bold text-brand-ink bg-brand-bg rounded-lg hover:bg-brand-ink hover:text-white transition-all"
                     >
                       Quincena
                     </button>
                     <button 
-                      onClick={() => { setDateRange(getPresetRange('corte')); setShowDatePicker(false); }}
+                      onClick={() => { setDateRange(getPresetRange('corte')); setShowDatePicker(false); setTxPage(1); }}
                       className="px-3 py-2 text-xs font-bold text-brand-ink bg-brand-bg rounded-lg hover:bg-brand-ink hover:text-white transition-all"
                     >
                       Corte Mes
@@ -213,7 +217,7 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
                 
                 {dateRange && (
                   <button 
-                    onClick={() => { setDateRange(null); setShowDatePicker(false); }}
+                    onClick={() => { setDateRange(null); setShowDatePicker(false); setTxPage(1); }}
                     className="w-full p-3 text-center text-xs font-bold text-red-500 border-t border-brand-border hover:bg-red-50 transition-colors"
                   >
                     Limpiar Filtro
@@ -331,7 +335,7 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
             return (
               <button
                 key={card}
-                onClick={() => setSelectedCard(card)}
+                onClick={() => { setSelectedCard(card); setTxPage(1); }}
                 className={cn(
                   "flex flex-col items-start px-4 py-3 rounded-xl border-2 transition-all text-left min-w-[120px]",
                   selectedCard === card
@@ -529,7 +533,108 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
             ))}
           </div>
         </div>
-      </div>
+
+        {/* Transaction Detail Table */}
+        {(() => {
+          const txProducts = selectedCard === 'TODAS'
+            ? baseFilteredProducts
+            : baseFilteredProducts.filter(p => p.payment_card === selectedCard);
+          
+          const totalPages = Math.max(1, Math.ceil(txProducts.length / TX_PER_PAGE));
+          const safePage = Math.min(txPage, totalPages);
+          const pageProducts = txProducts.slice((safePage - 1) * TX_PER_PAGE, safePage * TX_PER_PAGE);
+          const fmtMxn = (val: number) => val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
+          const fmtUsd = (val: number) => val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+          const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-MX') : '-';
+          
+          return (
+            <div className="bg-brand-surface border border-brand-border rounded-xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-bold text-brand-ink uppercase tracking-widest flex items-center gap-2">
+                  <CreditCard size={16} /> Desglose Total de Gastos
+                </h3>
+                <span className="text-[10px] font-bold text-brand-muted">{txProducts.length} registro(s)</span>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-brand-border">
+                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Fecha / ID</th>
+                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Artículo</th>
+                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Modelo</th>
+                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Categoría</th>
+                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Tarjeta</th>
+                      <th className="text-right pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">USD</th>
+                      <th className="text-right pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">MXN</th>
+                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Cliente</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brand-border/40">
+                    {pageProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-brand-muted text-xs font-medium">No hay registros para este filtro</td>
+                      </tr>
+                    ) : (
+                      pageProducts.map(p => (
+                        <tr key={p.id} className="hover:bg-brand-bg/40 transition-colors">
+                          <td className="py-3 pr-4 whitespace-nowrap font-mono text-[10px] text-brand-muted">{fmtDate(p.createdAt)}</td>
+                          <td className="py-3 pr-4 font-bold text-brand-ink">{p.brand || '-'}</td>
+                          <td className="py-3 pr-4 text-brand-ink max-w-[180px] truncate">{p.name || '-'}</td>
+                          <td className="py-3 pr-4">
+                            <span className="px-2 py-0.5 rounded-full bg-brand-ink/5 border border-brand-ink/10 text-[9px] font-bold text-brand-muted whitespace-nowrap">{p.category || '-'}</span>
+                          </td>
+                          <td className="py-3 pr-4 font-mono text-[10px] font-bold text-brand-ink">{p.payment_card || '-'}</td>
+                          <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtUsd(p.buyPriceUsd * (p.quantity || 1))}</td>
+                          <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtMxn(p.buyPriceMxn * (p.quantity || 1))}</td>
+                          <td className="py-3 text-brand-muted font-medium">{p.clientName || 'STOCK'}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  {txProducts.length > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 border-brand-ink">
+                        <td colSpan={5} className="pt-3 font-black text-brand-ink uppercase tracking-wider text-[10px]">Total</td>
+                        <td className="pt-3 text-right font-black font-mono text-brand-ink">
+                          {fmtUsd(txProducts.reduce((acc, p) => acc + (p.buyPriceUsd * (p.quantity || 1)), 0))}
+                        </td>
+                        <td className="pt-3 text-right font-black font-mono text-brand-ink">
+                          {fmtMxn(txProducts.reduce((acc, p) => acc + (p.buyPriceMxn * (p.quantity || 1)), 0))}
+                        </td>
+                        <td className="pt-3" />
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-brand-border">
+                  <span className="text-[10px] font-bold text-brand-muted">
+                    Página {safePage} de {totalPages}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setTxPage(Math.max(1, safePage - 1))}
+                      disabled={safePage <= 1}
+                      className="p-2 rounded-lg border border-brand-border text-brand-muted hover:text-brand-ink hover:border-brand-ink disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      onClick={() => setTxPage(Math.min(totalPages, safePage + 1))}
+                      disabled={safePage >= totalPages}
+                      className="p-2 rounded-lg border border-brand-border text-brand-muted hover:text-brand-ink hover:border-brand-ink disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
     </div>
   );
 }
