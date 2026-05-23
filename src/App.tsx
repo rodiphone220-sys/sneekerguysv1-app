@@ -38,6 +38,7 @@ import {
   ShoppingCart,
   Loader2,
   Mail,
+  Wallet,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, OrderStatus, CustomerOrder, Customer, Category } from './types';
@@ -105,6 +106,10 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isPersonalExpenseOpen, setIsPersonalExpenseOpen] = useState(false);
+  const [personalExpenses, setPersonalExpenses] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem('stockmaster_personal_expenses') || '[]'); } catch { return []; }
+  });
   const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -409,6 +414,15 @@ export default function App() {
     }
   };
 
+  const handleSavePersonalExpense = (expense: any) => {
+    const updated = [...personalExpenses, { ...expense, id: `EXP-${Date.now()}` }];
+    setPersonalExpenses(updated);
+    localStorage.setItem('stockmaster_personal_expenses', JSON.stringify(updated));
+    setIsPersonalExpenseOpen(false);
+    setToast({ message: `Gasto registrado: $${Number(expense.amount).toLocaleString()} MXN`, type: 'success' });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleDeleteProduct = (id: string) => {
     if (confirm('¿Estás seguro de eliminar este artículo?')) {
       setProducts(products.filter(p => p.id !== id));
@@ -695,6 +709,12 @@ export default function App() {
               onClick={() => { setActiveTab('finances'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
               icon={<DollarSign size={18} />} 
               label="Finanzas" 
+            />
+            <NavItem 
+              active={false} 
+              onClick={() => { setIsPersonalExpenseOpen(true); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+              icon={<Wallet size={18} />} 
+              label="Gastos Personales" 
             />
             {/* Status Accordion */}
             <div className="pt-4">
@@ -1086,7 +1106,8 @@ export default function App() {
             <FinanceView 
               products={products} 
               globalMarkup={globalMarkup} 
-              onUpdateMarkup={setGlobalMarkup} 
+              onUpdateMarkup={setGlobalMarkup}
+              personalExpenses={personalExpenses}
             />
           )}
 
@@ -1814,6 +1835,12 @@ export default function App() {
             onClose={() => setIsBulkUploadOpen(false)}
           />
         )}
+        {isPersonalExpenseOpen && (
+          <PersonalExpenseModal
+            onSave={handleSavePersonalExpense}
+            onClose={() => setIsPersonalExpenseOpen(false)}
+          />
+        )}
         {isCustomerPortalOpen && (
           <CustomerOrderForm 
             availableProducts={products.filter(p => p.isShowcase)}
@@ -1909,6 +1936,96 @@ function NavItem({ active, onClick, icon, label, badge }: { active: boolean, onC
         </span>
       )}
     </motion.button>
+  );
+}
+
+function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => void, onClose: () => void }) {
+  const [formData, setFormData] = useState({
+    category: 'Comida',
+    amount: '',
+    card: '',
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.amount || Number(formData.amount) <= 0) return;
+    setIsSaving(true);
+    setTimeout(() => {
+      onSave({
+        category: formData.category,
+        amount: Number(formData.amount),
+        card: formData.card || 'EFECTIVO',
+        date: formData.date,
+        description: formData.description,
+      });
+      setIsSaving(false);
+    }, 300);
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()} className="bg-brand-surface border border-brand-border rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-brand-border flex items-center justify-between">
+          <h2 className="text-lg font-black text-brand-ink uppercase tracking-tight flex items-center gap-2">
+            <Wallet className="text-amber-500" size={20} /> Gastos Personales
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-lg text-brand-muted hover:text-brand-ink hover:bg-brand-bg transition-colors"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Categoría</label>
+            <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all">
+              <option value="Comida">Comida</option>
+              <option value="Ropa">Ropa</option>
+              <option value="Salud">Salud</option>
+              <option value="Ocio">Ocio</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Servicios">Servicios</option>
+              <option value="Otros">Otros</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Monto (MXN)</label>
+            <input type="number" required min="1" step="0.01" value={formData.amount}
+              onChange={e => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all" placeholder="$0.00" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Tarjeta</label>
+            <select value={formData.card} onChange={e => setFormData({ ...formData, card: e.target.value })}
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all">
+              <option value="">Seleccionar</option>
+              <option value="AMEX AZUL">AMEX AZUL</option>
+              <option value="AMEX ALEX">AMEX ALEX</option>
+              <option value="SANTANDER">SANTANDER</option>
+              <option value="INVEX">INVEX</option>
+              <option value="NU">NU</option>
+              <option value="EFECTIVO">EFECTIVO</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Fecha</label>
+            <input type="date" value={formData.date}
+              onChange={e => setFormData({ ...formData, date: e.target.value })}
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Descripción (opcional)</label>
+            <input type="text" value={formData.description}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink transition-all" placeholder="¿En qué lo gastaste?" />
+          </div>
+          <button type="submit" disabled={isSaving || !formData.amount || Number(formData.amount) <= 0}
+            className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black text-sm rounded-xl transition-all uppercase tracking-widest">
+            {isSaving ? 'Guardando...' : 'Registrar Gasto Privado'}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }
 

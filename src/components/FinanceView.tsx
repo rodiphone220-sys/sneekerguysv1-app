@@ -38,9 +38,10 @@ interface FinanceViewProps {
   products: Product[];
   globalMarkup?: number;
   onUpdateMarkup?: (val: number) => void;
+  personalExpenses?: any[];
 }
 
-export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: FinanceViewProps) {
+export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, personalExpenses = [] }: FinanceViewProps) {
   const chartRef = React.useRef<HTMLDivElement>(null);
   const pieRef = React.useRef<HTMLDivElement>(null);
   
@@ -237,7 +238,7 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
       </header>
 
       {/* Primary KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <FinanceCard 
           title="Inversión Total (USD)" 
           value={formatCurrency(stats.totalCostoUsd)}
@@ -274,6 +275,22 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
             pricingEl?.scrollIntoView({ behavior: 'smooth' });
           }}
         />
+        {(() => {
+          const now = new Date();
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+          const monthTotal = personalExpenses
+            .filter((e: any) => e.date >= monthStart)
+            .reduce((acc: number, e: any) => acc + (Number(e.amount) || 0), 0);
+          return (
+            <FinanceCard 
+              title="Gasto Personal Mes" 
+              value={`$${monthTotal.toLocaleString()}`}
+              icon={<Wallet className="text-amber-500" size={20} />}
+              trend={0}
+              color="bg-amber-50/80 border-amber-200/50"
+            />
+          );
+        })()}
       </div>
 
       {/* Pricing Management Section */}
