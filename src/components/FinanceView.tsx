@@ -48,6 +48,8 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState('TODAS');
   const [txPage, setTxPage] = useState(1);
+  const [consolidatedView, setConsolidatedView] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const TX_PER_PAGE = 10;
   
   const CARD_FILTERS = ['TODAS', 'AMEX AZUL', 'AMEX ALEX', 'SANTANDER', 'INVEX', 'NU'];
@@ -543,10 +545,44 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
           
           const totalPages = Math.max(1, Math.ceil(txProducts.length / TX_PER_PAGE));
           const safePage = Math.min(txPage, totalPages);
-          const pageProducts = txProducts.slice((safePage - 1) * TX_PER_PAGE, safePage * TX_PER_PAGE);
           const fmtMxn = (val: number) => val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
           const fmtUsd = (val: number) => val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
           const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-MX') : '-';
+          
+          const getGroupKey = (p: any) => `${p.createdAt?.split('T')[0] || 'unknown'}_${p.payment_card || 'sin-tarjeta'}`;
+          
+          const groups = consolidatedView
+            ? Object.entries(
+                txProducts.reduce<Record<string, typeof txProducts>>((acc, p) => {
+                  const key = getGroupKey(p);
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(p);
+                  return acc;
+                }, {})
+              ).map(([key, items]) => ({
+                key,
+                date: items[0].createdAt,
+                card: items[0].payment_card || '-',
+                clientName: items[0].clientName || 'STOCK',
+                totalUsd: items.reduce((s, i) => s + (i.buyPriceUsd * (i.quantity || 1)), 0),
+                totalMxn: items.reduce((s, i) => s + (i.buyPriceMxn * (i.quantity || 1)), 0),
+                count: items.length,
+                items,
+              }))
+            : [];
+          
+          const toggleGroup = (key: string) => {
+            setExpandedGroups(prev => {
+              const next = new Set(prev);
+              if (next.has(key)) next.delete(key); else next.add(key);
+              return next;
+            });
+          };
+          
+          const pageGroups = consolidatedView
+            ? groups.slice((safePage - 1) * TX_PER_PAGE, safePage * TX_PER_PAGE)
+            : [];
+          const pageProducts = consolidatedView ? [] : txProducts.slice((safePage - 1) * TX_PER_PAGE, safePage * TX_PER_PAGE);
           
           return (
             <div className="bg-brand-surface border border-brand-border rounded-xl p-6 shadow-sm">
@@ -554,49 +590,104 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
                 <h3 className="text-sm font-bold text-brand-ink uppercase tracking-widest flex items-center gap-2">
                   <CreditCard size={16} /> Desglose Total de Gastos
                 </h3>
-                <span className="text-[10px] font-bold text-brand-muted">{txProducts.length} registro(s)</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold text-brand-muted">
+                    {consolidatedView ? `${groups.length} compra(s)` : `${txProducts.length} registro(s)`}
+                  </span>
+                  <button
+                    onClick={() => { setConsolidatedView(!consolidatedView); setTxPage(1); setExpandedGroups(new Set()); }}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border transition-all",
+                      consolidatedView
+                        ? "bg-brand-ink text-white border-brand-ink"
+                        : "bg-brand-bg text-brand-muted border-brand-border hover:border-brand-ink"
+                    )}
+                  >
+                    {consolidatedView ? 'Ver por Artículos' : 'Ver por Compras'}
+                  </button>
+                </div>
               </div>
               
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-brand-border">
+                      {consolidatedView && <th className="w-8 pb-3" />}
                       <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Fecha / ID</th>
-                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Artículo</th>
-                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Modelo</th>
-                      <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Categoría</th>
+                      {!consolidatedView && <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Artículo</th>}
+                      {!consolidatedView && <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Modelo</th>}
+                      {!consolidatedView && <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Categoría</th>}
                       <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Tarjeta</th>
+                      {consolidatedView && <th className="text-center pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Arts.</th>}
                       <th className="text-right pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">USD</th>
                       <th className="text-right pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">MXN</th>
                       <th className="text-left pb-3 font-bold text-brand-muted uppercase tracking-widest text-[9px]">Cliente</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brand-border/40">
-                    {pageProducts.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="py-12 text-center text-brand-muted text-xs font-medium">No hay registros para este filtro</td>
-                      </tr>
+                    {consolidatedView ? (
+                      pageGroups.length === 0 ? (
+                        <tr><td colSpan={7} className="py-12 text-center text-brand-muted text-xs font-medium">No hay registros para este filtro</td></tr>
+                      ) : (
+                        pageGroups.map(g => (
+                          <React.Fragment key={g.key}>
+                            <tr className="bg-brand-ink/5 hover:bg-brand-ink/10 transition-colors cursor-pointer" onClick={() => toggleGroup(g.key)}>
+                              <td className="py-3 pr-2">
+                                <span className="text-[10px] font-mono text-brand-muted transition-transform inline-block" style={{ transform: expandedGroups.has(g.key) ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                                  ▶
+                                </span>
+                              </td>
+                              <td className="py-3 pr-4 whitespace-nowrap font-mono text-[10px] text-brand-muted">{fmtDate(g.date)}</td>
+                              <td className="py-3 pr-4 font-mono text-[10px] font-bold text-brand-ink">{g.card}</td>
+                              <td className="py-3 pr-4 text-center font-bold text-brand-ink">
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-brand-ink text-white text-[10px] font-black">{g.count}</span>
+                              </td>
+                              <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtUsd(g.totalUsd)}</td>
+                              <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtMxn(g.totalMxn)}</td>
+                              <td className="py-3 text-brand-muted font-medium">{g.clientName}</td>
+                            </tr>
+                            {expandedGroups.has(g.key) && g.items.map(p => (
+                              <tr key={p.id} className="bg-brand-bg/30 hover:bg-brand-bg/60 transition-colors">
+                                <td className="py-2 pr-2 border-l-2 border-brand-ink/20 pl-6" />
+                                <td className="py-2 pr-4 whitespace-nowrap font-mono text-[9px] text-brand-muted">{p.sku || '-'}</td>
+                                <td className="py-2 pr-4 font-bold text-brand-ink text-[10px]">{p.brand || '-'}</td>
+                                <td className="py-2 pr-4 text-brand-ink text-[10px] max-w-[160px] truncate">{p.name || '-'}</td>
+                                <td className="py-2 pr-4">
+                                  <span className="px-1.5 py-0.5 rounded-full bg-brand-ink/5 border border-brand-ink/10 text-[8px] font-bold text-brand-muted whitespace-nowrap">{p.category || '-'}</span>
+                                </td>
+                                <td className="py-2 pr-4 text-right font-mono font-bold text-brand-ink text-[10px]">{fmtUsd(p.buyPriceUsd * (p.quantity || 1))}</td>
+                                <td className="py-2 pr-4 text-right font-mono font-bold text-brand-ink text-[10px]">{fmtMxn(p.buyPriceMxn * (p.quantity || 1))}</td>
+                                <td className="py-2 text-brand-muted font-medium text-[10px]">{p.clientName || 'STOCK'}</td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        ))
+                      )
                     ) : (
-                      pageProducts.map(p => (
-                        <tr key={p.id} className="hover:bg-brand-bg/40 transition-colors">
-                          <td className="py-3 pr-4 whitespace-nowrap font-mono text-[10px] text-brand-muted">{fmtDate(p.createdAt)}</td>
-                          <td className="py-3 pr-4 font-bold text-brand-ink">{p.brand || '-'}</td>
-                          <td className="py-3 pr-4 text-brand-ink max-w-[180px] truncate">{p.name || '-'}</td>
-                          <td className="py-3 pr-4">
-                            <span className="px-2 py-0.5 rounded-full bg-brand-ink/5 border border-brand-ink/10 text-[9px] font-bold text-brand-muted whitespace-nowrap">{p.category || '-'}</span>
-                          </td>
-                          <td className="py-3 pr-4 font-mono text-[10px] font-bold text-brand-ink">{p.payment_card || '-'}</td>
-                          <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtUsd(p.buyPriceUsd * (p.quantity || 1))}</td>
-                          <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtMxn(p.buyPriceMxn * (p.quantity || 1))}</td>
-                          <td className="py-3 text-brand-muted font-medium">{p.clientName || 'STOCK'}</td>
-                        </tr>
-                      ))
+                      pageProducts.length === 0 ? (
+                        <tr><td colSpan={8} className="py-12 text-center text-brand-muted text-xs font-medium">No hay registros para este filtro</td></tr>
+                      ) : (
+                        pageProducts.map(p => (
+                          <tr key={p.id} className="hover:bg-brand-bg/40 transition-colors">
+                            <td className="py-3 pr-4 whitespace-nowrap font-mono text-[10px] text-brand-muted">{fmtDate(p.createdAt)}</td>
+                            <td className="py-3 pr-4 font-bold text-brand-ink">{p.brand || '-'}</td>
+                            <td className="py-3 pr-4 text-brand-ink max-w-[180px] truncate">{p.name || '-'}</td>
+                            <td className="py-3 pr-4">
+                              <span className="px-2 py-0.5 rounded-full bg-brand-ink/5 border border-brand-ink/10 text-[9px] font-bold text-brand-muted whitespace-nowrap">{p.category || '-'}</span>
+                            </td>
+                            <td className="py-3 pr-4 font-mono text-[10px] font-bold text-brand-ink">{p.payment_card || '-'}</td>
+                            <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtUsd(p.buyPriceUsd * (p.quantity || 1))}</td>
+                            <td className="py-3 pr-4 text-right font-mono font-bold text-brand-ink">{fmtMxn(p.buyPriceMxn * (p.quantity || 1))}</td>
+                            <td className="py-3 text-brand-muted font-medium">{p.clientName || 'STOCK'}</td>
+                          </tr>
+                        ))
+                      )
                     )}
                   </tbody>
                   {txProducts.length > 0 && (
                     <tfoot>
                       <tr className="border-t-2 border-brand-ink">
-                        <td colSpan={5} className="pt-3 font-black text-brand-ink uppercase tracking-wider text-[10px]">Total</td>
+                        <td colSpan={consolidatedView ? 3 : 5} className="pt-3 font-black text-brand-ink uppercase tracking-wider text-[10px]">Total</td>
                         <td className="pt-3 text-right font-black font-mono text-brand-ink">
                           {fmtUsd(txProducts.reduce((acc, p) => acc + (p.buyPriceUsd * (p.quantity || 1)), 0))}
                         </td>
