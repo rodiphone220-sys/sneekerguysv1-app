@@ -12,7 +12,8 @@ import {
   Package,
   Calendar,
   ChevronDown,
-  X
+  X,
+  CreditCard
 } from 'lucide-react';
 import { Product } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
@@ -43,6 +44,9 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
   
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedCard, setSelectedCard] = useState('TODAS');
+  
+  const CARD_FILTERS = ['TODAS', 'AMEX AZUL', 'AMEX ALEX', 'SANTANDER', 'INVEX', 'NU'];
   
   const getPresetRange = (preset: string) => {
     const now = new Date();
@@ -76,15 +80,20 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
     };
   };
 
+  const baseFilteredProducts = React.useMemo(() => {
+    if (!dateRange) return products;
+    return products.filter(p => {
+      const productDate = p.createdAt?.split('T')[0];
+      if (!productDate) return false;
+      return productDate >= dateRange.start && productDate <= dateRange.end;
+    });
+  }, [products, dateRange]);
+
   const stats = React.useMemo(() => {
-    let filteredProducts = products;
+    let filteredProducts = baseFilteredProducts;
     
-    if (dateRange) {
-      filteredProducts = products.filter(p => {
-        const productDate = p.createdAt?.split('T')[0];
-        if (!productDate) return false;
-        return productDate >= dateRange.start && productDate <= dateRange.end;
-      });
+    if (selectedCard !== 'TODAS') {
+      filteredProducts = baseFilteredProducts.filter(p => p.payment_card === selectedCard);
     }
     
     const totalCostoUsd = filteredProducts.reduce((acc, p) => acc + (p.buyPriceUsd * (p.quantity || 1)), 0);
@@ -121,7 +130,7 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
       statusData,
       totalUnits
     };
-  }, [products, dateRange]);
+  }, [baseFilteredProducts, selectedCard]);
 
   const COLORS = ['#141414', '#5A5A40', '#F27D26', '#00FF00', '#FF4E00', '#5A5A40'];
 
@@ -303,6 +312,47 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup }: Fin
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Card Filter Tabs */}
+      <div className="bg-brand-surface border border-brand-border rounded-xl p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <CreditCard size={16} className="text-brand-muted" />
+          <span className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Filtrar por Tarjeta</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {CARD_FILTERS.map(card => {
+            const cardTotal = card === 'TODAS'
+              ? stats.totalCostoMxn
+              : baseFilteredProducts
+                  .filter(p => p.payment_card === card)
+                  .reduce((acc, p) => acc + (p.buyPriceMxn * (p.quantity || 1)), 0);
+            return (
+              <button
+                key={card}
+                onClick={() => setSelectedCard(card)}
+                className={cn(
+                  "flex flex-col items-start px-4 py-3 rounded-xl border-2 transition-all text-left min-w-[120px]",
+                  selectedCard === card
+                    ? "bg-brand-ink text-white border-brand-ink shadow-lg"
+                    : "bg-brand-bg text-brand-ink border-brand-border hover:border-brand-ink/40"
+                )}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-widest">{card === 'TODAS' ? '💳 TODAS' : `💳 ${card}`}</span>
+                <span className={cn(
+                  "text-sm font-black font-mono mt-1",
+                  selectedCard === card ? "text-white" : "text-brand-ink"
+                )}>
+                  ${Math.round(cardTotal).toLocaleString()}
+                </span>
+                <span className={cn(
+                  "text-[8px] font-bold uppercase tracking-widest",
+                  selectedCard === card ? "text-white/60" : "text-brand-muted"
+                )}>MXN</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
