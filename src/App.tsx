@@ -107,9 +107,8 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isPersonalExpenseOpen, setIsPersonalExpenseOpen] = useState(false);
-  const [personalExpenses, setPersonalExpenses] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem('stockmaster_personal_expenses') || '[]'); } catch { return []; }
-  });
+  const [personalExpenses, setPersonalExpenses] = useState<any[]>([]);
+  const [financeView, setFinanceView] = useState<'business' | 'personal'>('business');
   const [isCustomerPortalOpen, setIsCustomerPortalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,9 +254,10 @@ export default function App() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [prodRes, custRes] = await Promise.all([
+      const [prodRes, custRes, expRes] = await Promise.all([
         fetch('/api/products'),
-        fetch('/api/customers')
+        fetch('/api/customers'),
+        fetch('/api/personal-expenses')
       ]);
 
       if (prodRes.ok) {
@@ -270,6 +270,11 @@ export default function App() {
       if (custRes.ok) {
         const data = await custRes.json();
         setCustomers(data);
+      }
+
+      if (expRes.ok) {
+        const data = await expRes.json();
+        setPersonalExpenses(data);
       }
 
       setConnectionStatus({ status: 'ok', message: 'Conectado a Google Sheets' });
@@ -414,13 +419,30 @@ export default function App() {
     }
   };
 
-  const handleSavePersonalExpense = (expense: any) => {
-    const updated = [...personalExpenses, { ...expense, id: `EXP-${Date.now()}`, created_at: new Date().toISOString() }];
-    setPersonalExpenses(updated);
-    localStorage.setItem('stockmaster_personal_expenses', JSON.stringify(updated));
-    setIsPersonalExpenseOpen(false);
-    setToast({ message: `Gasto registrado: $${Number(expense.amount).toLocaleString()} MXN`, type: 'success' });
-    setTimeout(() => setToast(null), 3000);
+  const handleSavePersonalExpense = async (expense: any) => {
+    try {
+      const res = await fetch('/api/personal-expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Error al registrar gasto: ${err.error}`);
+        return;
+      }
+
+      const result = await res.json();
+      const updated = [...personalExpenses, result.expense];
+      setPersonalExpenses(updated);
+      setIsPersonalExpenseOpen(false);
+      setToast({ message: `Gasto registrado: $${Number(expense.monto).toLocaleString()} MXN`, type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      console.error('Save personal expense error:', error);
+      alert('Error de conexión al registrar gasto personal');
+    }
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -705,14 +727,14 @@ export default function App() {
               label="Asesor de Inversión" 
             />
             <NavItem 
-              active={activeTab === 'finances'} 
-              onClick={() => { setActiveTab('finances'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+              active={activeTab === 'finances' && financeView === 'business'} 
+              onClick={() => { setActiveTab('finances'); setFinanceView('business'); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
               icon={<DollarSign size={18} />} 
               label="Finanzas" 
             />
             <NavItem 
-              active={false} 
-              onClick={() => { setIsPersonalExpenseOpen(true); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
+              active={activeTab === 'finances' && financeView === 'personal'} 
+              onClick={() => { setActiveTab('finances'); setFinanceView('personal'); setIsPersonalExpenseOpen(true); if(window.innerWidth < 1024) setIsSidebarOpen(false); }} 
               icon={<Wallet size={18} />} 
               label="Gastos Personales" 
             />
@@ -1108,6 +1130,9 @@ export default function App() {
               globalMarkup={globalMarkup} 
               onUpdateMarkup={setGlobalMarkup}
               personalExpenses={personalExpenses}
+              financeView={financeView}
+              onFinanceViewChange={setFinanceView}
+              onOpenExpenseModal={() => setIsPersonalExpenseOpen(true)}
             />
           )}
 
@@ -1941,11 +1966,11 @@ function NavItem({ active, onClick, icon, label, badge }: { active: boolean, onC
 
 function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => void, onClose: () => void }) {
   const [formData, setFormData] = useState({
-    category: 'Comida',
-    amount: '',
-    card: '',
-    date: new Date().toISOString().split('T')[0],
-    description: '',
+    categoria: 'Comida',
+    monto: '',
+    tarjeta_pago: '',
+    fecha: new Date().toISOString().split('T')[0],
+    concepto: '',
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -1960,20 +1985,30 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
     { value: 'Otros', icon: '📌', label: 'Otros' },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.amount || Number(formData.amount) <= 0) return;
+    if (!formData.monto || Number(formData.monto) <= 0) return;
+    if (!formData.concepto?.trim()) return;
+    if (!formData.tarjeta_pago) return;
+    if (!formData.categoria) return;
+
     setIsSaving(true);
-    setTimeout(() => {
-      onSave({
-        category: formData.category,
-        amount: Number(formData.amount),
-        card: formData.card || 'EFECTIVO',
-        date: formData.date,
-        description: formData.description,
+    try {
+      await onSave({
+        ...formData,
+        monto: Number(formData.monto),
+        fecha: formData.fecha || new Date().toISOString().split('T')[0],
       });
+      setFormData({
+        categoria: 'Comida',
+        monto: '',
+        tarjeta_pago: '',
+        fecha: new Date().toISOString().split('T')[0],
+        concepto: '',
+      });
+    } finally {
       setIsSaving(false);
-    }, 300);
+    }
   };
 
   return (
@@ -1987,30 +2022,30 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Monto (MXN)</label>
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Monto (MXN) *</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-brand-muted">$</span>
-              <input type="number" required min="1" step="0.01" value={formData.amount}
-                onChange={e => setFormData({ ...formData, amount: e.target.value })}
+              <input type="number" required min="1" step="0.01" value={formData.monto}
+                onChange={e => setFormData({ ...formData, monto: e.target.value })}
                 className="w-full pl-10 pr-4 py-4 bg-brand-bg border-2 border-brand-border rounded-xl text-2xl font-black outline-none focus:border-amber-400 transition-all text-right" placeholder="0.00" />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Concepto *</label>
-            <input type="text" required value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
+            <input type="text" required value={formData.concepto}
+              onChange={e => setFormData({ ...formData, concepto: e.target.value })}
               className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all" placeholder="Ej. Cena, Gasolina, Ropa..." />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Categoría</label>
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Categoría *</label>
             <div className="grid grid-cols-4 gap-2">
               {CATEGORIES.map(c => (
-                <button key={c.value} type="button" onClick={() => setFormData({ ...formData, category: c.value })}
+                <button key={c.value} type="button" onClick={() => setFormData({ ...formData, categoria: c.value })}
                   className={cn(
                     "flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 transition-all",
-                    formData.category === c.value
+                    formData.categoria === c.value
                       ? "border-amber-400 bg-amber-50 text-brand-ink"
                       : "border-brand-border bg-brand-bg text-brand-muted hover:border-brand-ink/30"
                   )}>
@@ -2022,8 +2057,8 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Tarjeta</label>
-            <select value={formData.card} onChange={e => setFormData({ ...formData, card: e.target.value })}
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Tarjeta de Pago *</label>
+            <select required value={formData.tarjeta_pago} onChange={e => setFormData({ ...formData, tarjeta_pago: e.target.value })}
               className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all">
               <option value="">Seleccionar</option>
               <option value="AMEX AZUL">💳 AMEX AZUL</option>
@@ -2037,12 +2072,13 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
 
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Fecha</label>
-            <input type="date" value={formData.date}
-              onChange={e => setFormData({ ...formData, date: e.target.value })}
+            <input type="date" value={formData.fecha}
+              onChange={e => setFormData({ ...formData, fecha: e.target.value })}
               className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all" />
+            <p className="text-[9px] text-brand-muted mt-1">Si se deja vacío, se asignará la fecha actual automáticamente.</p>
           </div>
 
-          <button type="submit" disabled={isSaving || !formData.amount || Number(formData.amount) <= 0 || !formData.description?.trim() || !formData.card}
+          <button type="submit" disabled={isSaving || !formData.monto || Number(formData.monto) <= 0 || !formData.concepto?.trim() || !formData.tarjeta_pago}
             className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black text-sm rounded-xl transition-all uppercase tracking-widest shadow-lg shadow-amber-500/20">
             {isSaving ? 'Guardando...' : 'Registrar Gasto Privado'}
           </button>

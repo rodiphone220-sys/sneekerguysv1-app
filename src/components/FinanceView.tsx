@@ -15,7 +15,16 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  CreditCard
+  CreditCard,
+  ArrowLeft,
+  Utensils,
+  Car,
+  Shirt,
+  Heart,
+  Gamepad2,
+  Lightbulb,
+  Backpack,
+  Receipt
 } from 'lucide-react';
 import { Product } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
@@ -39,12 +48,21 @@ interface FinanceViewProps {
   globalMarkup?: number;
   onUpdateMarkup?: (val: number) => void;
   personalExpenses?: any[];
+  financeView?: 'business' | 'personal';
+  onFinanceViewChange?: (view: 'business' | 'personal') => void;
+  onOpenExpenseModal?: () => void;
 }
 
-export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, personalExpenses = [] }: FinanceViewProps) {
+export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, personalExpenses = [], financeView: externalView, onFinanceViewChange, onOpenExpenseModal }: FinanceViewProps) {
   const chartRef = React.useRef<HTMLDivElement>(null);
   const pieRef = React.useRef<HTMLDivElement>(null);
   
+  const [activeView, setActiveView] = useState<'business' | 'personal'>(externalView || 'business');
+
+  React.useEffect(() => {
+    if (externalView) setActiveView(externalView);
+  }, [externalView]);
+
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState('TODAS');
@@ -279,15 +297,16 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, perso
           const now = new Date();
           const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
           const monthTotal = personalExpenses
-            .filter((e: any) => e.date >= monthStart)
-            .reduce((acc: number, e: any) => acc + (Number(e.amount) || 0), 0);
+            .filter((e: any) => e.fecha >= monthStart)
+            .reduce((acc: number, e: any) => acc + (Number(e.monto) || 0), 0);
           return (
             <FinanceCard 
               title="Gasto Personal Mes" 
               value={`$${monthTotal.toLocaleString()}`}
               icon={<Wallet className="text-amber-500" size={20} />}
               trend={0}
-              color="bg-amber-50/80 border-amber-200/50"
+              color={activeView === 'personal' ? "bg-amber-100 border-amber-400 ring-2 ring-amber-400" : "bg-amber-50/80 border-amber-200/50"}
+              onClick={() => { setActiveView('personal'); onFinanceViewChange?.('personal'); onOpenExpenseModal?.(); }}
             />
           );
         })()}
@@ -379,6 +398,33 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, perso
         </div>
       </div>
 
+      {/* View Toggle */}
+      <div className="flex items-center gap-1 bg-brand-surface border border-brand-border rounded-xl p-1 w-fit">
+        <button
+          onClick={() => { setActiveView('business'); onFinanceViewChange?.('business'); }}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+            activeView === 'business'
+              ? "bg-brand-ink text-brand-surface shadow-sm"
+              : "text-brand-muted hover:text-brand-ink"
+          )}
+        >
+          <BarChart3 size={14} /> Inversión Comercial
+        </button>
+        <button
+          onClick={() => { setActiveView('personal'); onFinanceViewChange?.('personal'); }}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+            activeView === 'personal'
+              ? "bg-amber-500 text-white shadow-sm"
+              : "text-brand-muted hover:text-brand-ink"
+          )}
+        >
+          <Wallet size={14} /> Gastos Personales
+        </button>
+      </div>
+
+      {activeView === 'business' ? (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Category breakdown Chart */}
         <div ref={chartRef} className="lg:col-span-2 bg-brand-surface border border-brand-border rounded-xl p-6 shadow-sm transition-colors duration-300">
@@ -553,6 +599,9 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, perso
           </div>
         </div>
       </div>
+      ) : (
+        <PersonalExpenseGraphics personalExpenses={personalExpenses} />
+      )}
 
       {/* Transaction Detail Table */}
         {(() => {
@@ -744,6 +793,171 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, perso
             </div>
           );
         })()}
+    </div>
+  );
+}
+
+function PersonalExpenseGraphics({ personalExpenses }: { personalExpenses: any[] }) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthExpenses = personalExpenses.filter((e: any) => e.fecha >= monthStart);
+
+  const totalMonto = monthExpenses.reduce((acc: number, e: any) => acc + (Number(e.monto) || 0), 0);
+  const txCount = monthExpenses.length;
+  const avgTicket = txCount > 0 ? totalMonto / txCount : 0;
+
+  const CATEGORY_META = [
+    { value: 'Comida', icon: '🍽️', color: '#F27D26' },
+    { value: 'Transporte', icon: '🚗', color: '#3B82F6' },
+    { value: 'Ropa', icon: '👕', color: '#8B5CF6' },
+    { value: 'Salud', icon: '💊', color: '#EF4444' },
+    { value: 'Ocio', icon: '🎮', color: '#10B981' },
+    { value: 'Servicios', icon: '💡', color: '#F59E0B' },
+    { value: 'Viajes', icon: '🧳', color: '#06B6D4' },
+    { value: 'Otros', icon: '📌', color: '#6B7280' },
+  ];
+
+  const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+    Comida: <Utensils size={14} />,
+    Transporte: <Car size={14} />,
+    Ropa: <Shirt size={14} />,
+    Salud: <Heart size={14} />,
+    Ocio: <Gamepad2 size={14} />,
+    Servicios: <Lightbulb size={14} />,
+    Viajes: <Backpack size={14} />,
+    Otros: <Receipt size={14} />,
+  };
+
+  const categoryTotals = CATEGORY_META.map(cat => ({
+    ...cat,
+    total: monthExpenses
+      .filter((e: any) => e.categoria === cat.value)
+      .reduce((acc: number, e: any) => acc + (Number(e.monto) || 0), 0),
+  })).sort((a, b) => b.total - a.total);
+
+  const maxCategoryTotal = Math.max(...categoryTotals.map(c => c.total), 1);
+
+  const CARDS = ['AMEX AZUL', 'AMEX ALEX', 'SANTANDER', 'INVEX', 'NU', 'EFECTIVO'];
+  const cardTotals = CARDS.map(card => ({
+    name: card,
+    total: monthExpenses
+      .filter((e: any) => e.tarjeta_pago === card)
+      .reduce((acc: number, e: any) => acc + (Number(e.monto) || 0), 0),
+    icon: card === 'EFECTIVO' ? '💵' : '💳',
+  }));
+
+  const fmt = (val: number) => val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
+
+  return (
+    <div className="space-y-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-amber-50/80 border border-amber-200/50 rounded-xl p-5">
+          <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-1">Gasto Mensual Total</p>
+          <p className="text-2xl font-black font-mono text-brand-ink">{fmt(totalMonto)}</p>
+        </div>
+        <div className="bg-brand-surface border border-brand-border rounded-xl p-5">
+          <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-1">Transacciones Ejecutadas</p>
+          <p className="text-2xl font-black font-mono text-brand-ink">{txCount} registros</p>
+        </div>
+        <div className="bg-brand-surface border border-brand-border rounded-xl p-5">
+          <p className="text-[10px] font-bold text-brand-muted uppercase tracking-widest mb-1">Promedio por Ticket</p>
+          <p className="text-2xl font-black font-mono text-brand-ink">{fmt(avgTicket)}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Left: Category Distribution (60%) */}
+        <div className="lg:col-span-3 bg-brand-ink text-white rounded-2xl p-6 shadow-2xl shadow-brand-ink/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+            <Receipt size={120} />
+          </div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-bold uppercase tracking-widest flex items-center gap-2">
+                <BarChart3 size={16} className="text-brand-accent" /> Gastos por Categoría
+              </h3>
+              <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{txCount} transacciones</span>
+            </div>
+
+            <div className="space-y-3">
+              {categoryTotals.map((cat) => (
+                <div key={cat.value} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span>{cat.icon}</span>
+                      <span className="font-bold text-white/90">{cat.value}</span>
+                    </div>
+                    <span className="font-mono font-bold text-brand-accent">{fmt(cat.total)}</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(cat.total / maxCategoryTotal) * 100}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: cat.color }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {txCount === 0 && (
+              <div className="py-12 text-center">
+                <p className="text-white/40 text-sm font-medium">No hay gastos registrados este mes</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Payment Card Summary (40%) */}
+        <div className="lg:col-span-2 bg-brand-surface border border-brand-border rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-bold text-brand-ink uppercase tracking-widest flex items-center gap-2">
+              <CreditCard size={16} /> Resumen por Tarjeta
+            </h3>
+          </div>
+
+          <div className="space-y-3">
+            {cardTotals.map((card) => (
+              <div
+                key={card.name}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl border-2 transition-all",
+                  card.total > 0
+                    ? "bg-brand-bg border-brand-border"
+                    : "bg-brand-bg/50 border-transparent opacity-50"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{card.icon}</span>
+                  <div>
+                    <p className="text-xs font-bold text-brand-ink">{card.name}</p>
+                    {card.total > 0 && (
+                      <p className="text-[9px] font-medium text-brand-muted">
+                        {monthExpenses.filter((e: any) => e.tarjeta_pago === card.name).length} cargo(s)
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <span className={cn(
+                  "font-mono font-bold text-sm",
+                  card.total > 0 ? "text-brand-ink" : "text-brand-muted/50"
+                )}>
+                  {fmt(card.total)}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {txCount === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-brand-muted text-sm font-medium">Sin movimientos este mes</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

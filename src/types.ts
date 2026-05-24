@@ -176,6 +176,19 @@ export interface DashboardStats {
   statusCounts: Record<OrderStatus, number>;
 }
 
+export type ExpenseCategory = 'Comida' | 'Transporte' | 'Ropa' | 'Salud' | 'Ocio' | 'Servicios' | 'Viajes' | 'Otros';
+export type PaymentCard = 'AMEX AZUL' | 'AMEX ALEX' | 'SANTANDER' | 'INVEX' | 'NU' | 'EFECTIVO';
+
+export interface PersonalExpense {
+  id: string;
+  fecha: string;
+  monto: number;
+  concepto: string;
+  categoria: ExpenseCategory;
+  tarjeta_pago: PaymentCard;
+  created_at: string;
+}
+
 export interface SystemSettings {
   isAiAssistantEnabled: boolean;
   isAiPrimaryResponder: boolean;
