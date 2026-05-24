@@ -415,7 +415,7 @@ export default function App() {
   };
 
   const handleSavePersonalExpense = (expense: any) => {
-    const updated = [...personalExpenses, { ...expense, id: `EXP-${Date.now()}` }];
+    const updated = [...personalExpenses, { ...expense, id: `EXP-${Date.now()}`, created_at: new Date().toISOString() }];
     setPersonalExpenses(updated);
     localStorage.setItem('stockmaster_personal_expenses', JSON.stringify(updated));
     setIsPersonalExpenseOpen(false);
@@ -1997,8 +1997,8 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Concepto</label>
-            <input type="text" value={formData.description}
+            <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest">Concepto *</label>
+            <input type="text" required value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all" placeholder="Ej. Cena, Gasolina, Ropa..." />
           </div>
@@ -2042,7 +2042,7 @@ function PersonalExpenseModal({ onSave, onClose }: { onSave: (expense: any) => v
               className="w-full px-4 py-3 bg-brand-bg border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-amber-400 transition-all" />
           </div>
 
-          <button type="submit" disabled={isSaving || !formData.amount || Number(formData.amount) <= 0}
+          <button type="submit" disabled={isSaving || !formData.amount || Number(formData.amount) <= 0 || !formData.description?.trim() || !formData.card}
             className="w-full py-4 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black text-sm rounded-xl transition-all uppercase tracking-widest shadow-lg shadow-amber-500/20">
             {isSaving ? 'Guardando...' : 'Registrar Gasto Privado'}
           </button>
