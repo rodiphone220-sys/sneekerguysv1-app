@@ -143,15 +143,22 @@ export function ProductForm({
   customers = [], boutiques = [], masterCategories = [], globalMarkup: initialGlobalMarkup = 30, onRefresh
 }: ProductFormProps) {
   const todayStr = new Date().toISOString().split('T')[0];
+  const defaultCommon = {
+    destination: product?.destino || 'EL PASO',
+    exchangeRate: product?.exchangeRate || initialExchangeRate,
+    sku_manual: product?.sku_manual || '',
+    internal_notes: product?.internal_notes || '',
+    boutique: product?.boutique || '',
+    payment_card: product?.payment_card || '',
+    origen_articulo: product?.origen_articulo || 'USA',
+    moneda_compra: (product?.moneda_compra || 'USD') as 'USD' | 'MXN',
+    fecha_compra: product?.fecha_registro || product?.createdAt?.split('T')[0] || todayStr,
+  };
   const [commonData, setCommonData] = useState<{
     destination: string; exchangeRate: number; sku_manual: string;
     internal_notes: string; boutique: string; payment_card: string; origen_articulo: string; moneda_compra: 'USD' | 'MXN';
     fecha_compra: string;
-  }>({
-    destination: 'EL PASO', exchangeRate: initialExchangeRate, sku_manual: '',
-    internal_notes: '', boutique: '', payment_card: '', origen_articulo: 'USA', moneda_compra: 'USD',
-    fecha_compra: todayStr,
-  });
+  }>(defaultCommon);
 
   const initialDefaultStatus = commonData.moneda_compra === 'MXN' ? 'Comprado en México' : 'Comprado en USA';
   const [items, setItems] = useState<any[]>(product ? [product] : [{
