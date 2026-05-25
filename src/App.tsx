@@ -84,7 +84,6 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerOrders, setCustomerOrders] = useState<CustomerOrder[]>([]);
-  const [inventoryCount, setInventoryCount] = useState(0);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -265,7 +264,24 @@ export default function App() {
 
         if (prodRes.ok) {
           const data = await prodRes.json();
-          setProducts(data);
+          let allProducts = data;
+
+          if (invRes.ok) {
+            const invData = await invRes.json();
+            if (invData.items && invData.items.length > 0) {
+              const invProducts = invData.items.map((item: any) => ({
+                ...item,
+                id: item.id || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                sku: item.sku || item.id_stock || `INV-${Date.now()}`,
+                clientName: '',
+                isInventory: true,
+                currentStatus: 'COMPRADO' as OrderStatus,
+              }));
+              allProducts = [...data, ...invProducts];
+            }
+          }
+
+          setProducts(allProducts);
           setJustSynced(true);
           setTimeout(() => setJustSynced(false), 2000);
         }
@@ -278,11 +294,6 @@ export default function App() {
         if (expRes.ok) {
           const data = await expRes.json();
           setPersonalExpenses(data);
-        }
-
-        if (invRes.ok) {
-          const data = await invRes.json();
-          setInventoryCount(data.total || 0);
         }
 
       setConnectionStatus({ status: 'ok', message: 'Conectado a Google Sheets' });
@@ -1143,7 +1154,7 @@ export default function App() {
             </div>
           )}
           
-          {!isLoading && activeTab === 'dashboard' && <Dashboard products={products} onNavigate={setActiveTab} inventoryCount={inventoryCount} />}
+          {!isLoading && activeTab === 'dashboard' && <Dashboard products={products} onNavigate={setActiveTab} />}
           {!isLoading && activeTab === 'advisor' && <InvestmentAdvisor products={products} />}
           {!isLoading && activeTab === 'messaging' && <MessagingView settings={systemSettings} />}
           {!isLoading && activeTab === 'email' && <EmailClient />}
