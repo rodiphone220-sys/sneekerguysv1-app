@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server';
 import cloudinary from 'cloudinary';
 
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+function checkCloudinaryConfig(): string | null {
+  const missing: string[] = [];
+  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push('CLOUDINARY_CLOUD_NAME');
+  if (!process.env.CLOUDINARY_API_KEY) missing.push('CLOUDINARY_API_KEY');
+  if (!process.env.CLOUDINARY_API_SECRET) missing.push('CLOUDINARY_API_SECRET');
+  return missing.length > 0 ? `Cloudinary config incompleta: ${missing.join(', ')}` : null;
+}
+
+function ensureCloudinaryConfig(): void {
+  cloudinary.v2.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 export async function POST(request: Request) {
   try {
+    const configError = checkCloudinaryConfig();
+    if (configError) {
+      return NextResponse.json({ error: configError, details: 'Configuración incompleta en producción' }, { status: 400 });
+    }
+    ensureCloudinaryConfig();
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     

@@ -72,7 +72,7 @@ const mapRowToProduct = (row: any[], index: number): any => {
   }
 
   return {
-    id: `${row[0] || `r${index}`}-${index}`,
+    id: row[0] || `r${index}`,
     originalId: row[0] || '',
     sku: row[0] || '',
     fecha_registro: row[1] || today,
@@ -196,13 +196,13 @@ export async function GET() {
   try {
     const auth = getAuthClient();
     if (!auth) {
-      console.error('[API GET] ERROR: Auth failed');
-      return Response.json({ error: 'Auth failed' }, { status: 500 });
+      console.error('[API GET] ERROR: Auth failed — GOOGLE_SERVICE_ACCOUNT_EMAIL o GOOGLE_PRIVATE_KEY no configurados en producción');
+      return Response.json({ error: 'Credenciales de Google Sheets no configuradas en el servidor', details: 'Configuración incompleta en producción. Verifica GOOGLE_SERVICE_ACCOUNT_EMAIL y GOOGLE_PRIVATE_KEY.' }, { status: 400 });
     }
 
     if (!SHEET_ID) {
       console.error('[API GET] ERROR: GOOGLE_SHEET_ID no definido');
-      return Response.json({ error: 'GOOGLE_SHEET_ID no definido' }, { status: 500 });
+      return Response.json({ error: 'GOOGLE_SHEET_ID no definido en el servidor', details: 'Configuración incompleta en producción.' }, { status: 400 });
     }
 
     const sheets = google.sheets('v4');
@@ -229,8 +229,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const auth = getAuthClient();
-    if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
-    if (!SHEET_ID) return Response.json({ error: 'GOOGLE_SHEET_ID no definido' }, { status: 500 });
+    if (!auth) return Response.json({ error: 'Credenciales de Google Sheets no configuradas en el servidor', details: 'Configuración incompleta en producción.' }, { status: 400 });
+    if (!SHEET_ID) return Response.json({ error: 'GOOGLE_SHEET_ID no definido en el servidor', details: 'Configuración incompleta en producción.' }, { status: 400 });
 
     const body = await request.json();
     const products = Array.isArray(body) ? body : [body];
@@ -276,7 +276,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const auth = getAuthClient();
-    if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
+    if (!auth) return Response.json({ error: 'Credenciales de Google Sheets no configuradas en el servidor', details: 'Configuración incompleta en producción.' }, { status: 400 });
 
     const body = await request.json();
     const { id, ...productData } = body;

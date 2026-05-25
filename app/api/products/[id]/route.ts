@@ -119,7 +119,7 @@ const mapProductToRow = (product: any): any[] => {
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const auth = getAuthClient();
-    if (!auth) return Response.json({ error: 'Auth failed' }, { status: 500 });
+    if (!auth) return Response.json({ error: 'Credenciales de Google Sheets no configuradas en el servidor', details: 'Configuración incompleta en producción.' }, { status: 400 });
 
     const body = await request.json();
     const id = params.id;
@@ -134,20 +134,27 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const rows = getResponse.data.values || [];
     let rowIndex = -1;
 
-    let searchId = id;
-    if (id && id.includes('-')) {
-      searchId = id.split('-')[0];
+    // Build a list of candidate IDs to try
+    const candidates = [id];
+    let stripped = id.replace(/-\d+$/, '');
+    if (stripped !== id) candidates.push(stripped);
+    if (stripped !== id.replace(/-\d+-\d+$/, '')) {
+      const doubleStripped = id.replace(/-\d+-\d+$/, '');
+      if (doubleStripped !== id && doubleStripped !== stripped) candidates.push(doubleStripped);
     }
 
-    for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] === searchId || rows[i][0] === id) {
-        rowIndex = i + 2;
-        break;
+    for (const candidate of candidates) {
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i][0] === candidate) {
+          rowIndex = i + 2;
+          break;
+        }
       }
+      if (rowIndex !== -1) break;
     }
 
     if (rowIndex === -1) {
-      return Response.json({ error: 'Product not found', searchId }, { status: 404 });
+      return Response.json({ error: 'Product not found', searchedId: id, candidates }, { status: 404 });
     }
 
     const row = mapProductToRow(body);

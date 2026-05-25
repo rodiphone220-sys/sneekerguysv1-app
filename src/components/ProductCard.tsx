@@ -2,7 +2,7 @@ import React from 'react';
 import { Product, OrderStatus } from '../types';
 import { cn, formatCurrency, getProxyImageUrl } from '../lib/utils';
 import { StatusPipeline } from './StatusPipeline';
-import { MoreHorizontal, Edit2, Trash2, ArrowUpRight, ChevronDown, Check, Package } from 'lucide-react';
+import { MoreHorizontal, Edit2, Trash2, ArrowUpRight, ChevronDown, Check, Package, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ProductCardProps {
@@ -17,10 +17,13 @@ interface ProductCardProps {
 export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange, onDelete, isHighlighted }: ProductCardProps) {
   const [showActions, setShowActions] = React.useState(false);
   const [justUpdated, setJustUpdated] = React.useState(false);
+  const [showReferencia, setShowReferencia] = React.useState(false);
 
   const displayPriceMxn = (product.sellPriceMxn && product.sellPriceMxn > 0) 
     ? product.sellPriceMxn 
     : Math.round((product.buyPriceMxn || 0) * (1 + (globalMarkup / 100)));
+
+  const referenciaValue = product.referido_por || product.numero_pedido || product.sku_manual || '';
 
   // Debug imageUrl
   const imageProxyUrl = getProxyImageUrl(product.imageUrl);
@@ -183,6 +186,38 @@ export function ProductCard({ product, globalMarkup = 35, onEdit, onStatusChange
                 </AnimatePresence>
               </div>
             </div>
+          </div>
+          <div className="mb-2">
+            <button
+              onClick={() => setShowReferencia(!showReferencia)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border-2 border-transparent transition-all",
+                showReferencia
+                  ? "bg-brand-ink text-white border-brand-ink"
+                  : "bg-brand-bg text-brand-muted border-transparent hover:border-brand-ink/20"
+              )}
+            >
+              <Hash size={10} />
+              Referencia de compra
+            </button>
+            <AnimatePresence>
+              {showReferencia && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-1.5 px-2.5 py-2 rounded-lg bg-brand-bg border border-brand-border text-[11px] text-brand-ink font-mono">
+                    {referenciaValue ? (
+                      <span className="font-bold">{referenciaValue}</span>
+                    ) : (
+                      <span className="text-brand-muted italic">Sin referencia registrada</span>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <h4 className="text-15px font-bold text-brand-ink line-clamp-2 leading-tight min-h-[2.5rem]">{product.name}</h4>
           <div className="flex items-center gap-2 mt-1">

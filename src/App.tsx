@@ -42,7 +42,6 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, OrderStatus, CustomerOrder, Customer, Category } from './types';
-import { INITIAL_PRODUCTS } from './data/mockData';
 import { INITIAL_CATEGORIES } from './data/categories';
 import { ProductCard } from './components/ProductCard';
 import { ProductForm } from './components/ProductForm';
@@ -124,10 +123,11 @@ export default function App() {
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [trackingProduct, setTrackingProduct] = useState<Product | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isControlOpen, setIsControlOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ id: string; status: string } | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -508,11 +508,10 @@ export default function App() {
     
     const originalStatus = originalProduct.currentStatus;
     
-    // 1. Validar transición
+    // 1. Validar transición (solo advertencia, no bloquea)
     const validation = validateStatusTransition(originalStatus, newStatus);
     if (!validation.valid) {
-      setToast({ message: validation.message || 'Transición no permitida', type: 'error' });
-      return;
+      setToast({ message: validation.message || 'Transición no permitida', type: 'warning' });
     }
     
     // 1.5. Confirmación para estatus ENTREGADO
@@ -520,6 +519,11 @@ export default function App() {
       setPendingStatusChange({ id: productId, status: newStatus });
       return;
     }
+    
+    // 1.6. Evitar re-entrada mientras hay una petición en curso
+    if (isUpdatingStatus) return;
+    
+    setIsUpdatingStatus(true);
     
     // 2. Optimistic UI Update
     setProducts(prev => prev.map(p => 
@@ -548,12 +552,7 @@ export default function App() {
         throw new Error(errorData.error || `Error ${response.status}`);
       }
       
-      // 4. Actualizar contadores
-      const newCounts = calculateStatusCounts(products.map(p => 
-        p.id === productId ? { ...p, currentStatus: newStatus as OrderStatus } : p
-      ));
-      
-      // 5. Manejar filtro activo
+      // 4. Manejar filtro activo
       if (selectedStatus && selectedStatus !== newStatus) {
         setToast({ message: `Producto movido a "${STATUS_LOGISTICS_MAP[newStatus as OrderStatus]}"`, type: 'success' });
       } else {
@@ -568,6 +567,8 @@ export default function App() {
           : p
       ));
       setToast({ message: `❌ Error al actualizar: ${error.message}`, type: 'error' });
+    } finally {
+      setIsUpdatingStatus(false);
     }
     
     setTimeout(() => setToast(null), 4000);
@@ -587,6 +588,9 @@ export default function App() {
     }
     
     const originalStatus = originalProduct.currentStatus;
+    
+    if (isUpdatingStatus) return;
+    setIsUpdatingStatus(true);
     
     // Optimistic UI Update
     setProducts(prev => prev.map(p => 
@@ -616,10 +620,7 @@ export default function App() {
       
       setToast({ message: `🎉 ¡Entrega completada! Producto marcado como "${STATUS_LOGISTICS_MAP[newStatus as OrderStatus]}"`, type: 'success' });
       
-      // Remover de la vista si hay filtro activo
-      if (selectedStatus && selectedStatus !== newStatus) {
-        // El producto ya no coincide con el filtro
-      }
+      setPendingStatusChange(null);
       
     } catch (error: any) {
       setProducts(prev => prev.map(p => 
@@ -628,9 +629,10 @@ export default function App() {
           : p
       ));
       setToast({ message: `❌ Error al actualizar: ${error.message}`, type: 'error' });
+    } finally {
+      setIsUpdatingStatus(false);
     }
     
-    setPendingStatusChange(null);
     setTimeout(() => setToast(null), 4000);
   };
 
@@ -2097,7 +2099,7 @@ function SettingsRow({ title, value }: { title: string, value: string }) {
   );
 }
 
-function Toast({ toast, onClose }: { toast: { message: string; type: 'success' | 'error' } | null, onClose: () => void }) {
+function Toast({ toast, onClose }: { toast: { message: string; type: 'success' | 'error' | 'warning' } | null, onClose: () => void }) {
   React.useEffect(() => {
     if (toast) {
       const t = setTimeout(onClose, 4000);
@@ -2116,6 +2118,8 @@ function Toast({ toast, onClose }: { toast: { message: string; type: 'success' |
         "fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl z-50 font-bold text-sm",
         toast.type === "success" 
           ? "bg-[#00FF85] text-black" 
+          : toast.type === "warning"
+          ? "bg-yellow-500 text-black"
           : "bg-red-500 text-white"
       )}
     >

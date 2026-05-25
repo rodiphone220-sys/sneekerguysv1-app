@@ -124,7 +124,7 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Total SKU"
+          title="TOTAL ARTICULOS"
           value={products.length.toString()}
           icon={<Package size={20} className="text-brand-ink" />}
           color="text-brand-ink"

@@ -3,7 +3,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { messages, model } = body;
     const groqKey = process.env.GROQ_API_KEY || '';
-    if (!groqKey) return Response.json({ error: 'GROQ_API_KEY not configured' }, { status: 500 });
+    if (!groqKey) {
+      console.error('[AI CHAT] GROQ_API_KEY no configurada en producción');
+      return Response.json({ error: 'GROQ_API_KEY no está configurada en el servidor', details: 'Configuración incompleta en producción. Contacta al administrador.' }, { status: 400 });
+    }
     
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
