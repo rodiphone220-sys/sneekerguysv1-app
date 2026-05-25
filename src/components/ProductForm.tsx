@@ -5,7 +5,7 @@ import {
   X, Upload, Plus, Trash2, ChevronRight, Search, Calculator,
   CreditCard, DollarSign, Tag, Clock, CheckCircle2, Building2,
   MapPin, AlertCircle, Image as ImageIcon, Sparkles, Clipboard,
-  Loader2, ListFilter, ShoppingBag, TrendingUp, Info, User, Phone, Mail
+  Loader2, ListFilter, ShoppingBag, TrendingUp, Info, User, Phone, Mail, CalendarDays
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Customer } from '../types';
@@ -142,12 +142,15 @@ export function ProductForm({
   product, onSave, onClose, exchangeRate: initialExchangeRate = 18.00,
   customers = [], boutiques = [], masterCategories = [], globalMarkup: initialGlobalMarkup = 30, onRefresh
 }: ProductFormProps) {
+  const todayStr = new Date().toISOString().split('T')[0];
   const [commonData, setCommonData] = useState<{
     destination: string; exchangeRate: number; sku_manual: string;
-    internal_notes: string; boutique: string; payment_card: string; origen_articulo: string; moneda_compra: 'USD' | 'MXN'
+    internal_notes: string; boutique: string; payment_card: string; origen_articulo: string; moneda_compra: 'USD' | 'MXN';
+    fecha_compra: string;
   }>({
     destination: 'EL PASO', exchangeRate: initialExchangeRate, sku_manual: '',
     internal_notes: '', boutique: '', payment_card: '', origen_articulo: 'USA', moneda_compra: 'USD',
+    fecha_compra: todayStr,
   });
 
   const [items, setItems] = useState<any[]>(product ? [product] : [{
@@ -490,6 +493,15 @@ export function ProductForm({
                 <h3 className="text-xs font-black text-brand-ink uppercase tracking-widest italic">Configuración de Origen</h3>
               </div>
               <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest pl-1">Fecha de Compra</label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted" size={16} />
+                    <input type="date" value={commonData.fecha_compra}
+                      onChange={e => setCommonData({ ...commonData, fecha_compra: e.target.value })}
+                      className="w-full pl-12 pr-4 py-3 bg-white border border-brand-border rounded-xl text-sm font-bold outline-none focus:border-brand-ink" />
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-brand-muted uppercase tracking-widest pl-1">Destino Global</label>
                   <div className="relative">
