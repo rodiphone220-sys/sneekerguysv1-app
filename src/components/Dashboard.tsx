@@ -20,6 +20,7 @@ import { motion } from 'framer-motion';
 interface DashboardProps {
   products: Product[];
   onNavigate: (tab: any) => void;
+  inventoryCount?: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,7 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
   'Entregado': '✅ Entregado'
 };
 
-export function Dashboard({ products, onNavigate }: DashboardProps) {
+export function Dashboard({ products, onNavigate, inventoryCount = 0 }: DashboardProps) {
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -136,7 +137,7 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
         />
         <StatCard 
           title="Unidades"
-          value={stats.totalItems.toString()}
+          value={(stats.totalItems + inventoryCount).toString()}
           icon={<Package size={20} className="text-blue-600" />}
           color="text-blue-600"
           delay={0.15}

@@ -429,26 +429,30 @@ export function ProductForm({
       columns: 'A-AC (29 cols)', ubicacion: first?.ubicacion_actual
     });
 
-    const inventoryItems = items.map((item, idx) => ({ item, final: finalProducts[idx] })).filter(({ item }) => (item as any).isInventory);
-    inventoryItems.forEach(({ item }) => {
-      const skuBase = commonData.sku_manual && commonData.sku_manual.trim() !== '' && !commonData.sku_manual.toLowerCase().includes('identificador')
-        ? commonData.sku_manual.trim() : `TSG-${Date.now()}`;
-      const sku = `${skuBase}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-      fetch('/api/inventario-estatico', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku, id_stock: sku, nombre: item.name, marca: item.brand,
-          talla: item.size, categoria: item.category, imageUrl: item.imageUrl,
-          notes: commonData.internal_notes,
-          fecha_compra_usa: commonData.fecha_compra || new Date().toISOString().split('T')[0],
-        })
-      }).then(r => r.json()).then(d => { if (!d.success) console.error('[INVENTARIO] Error:', d.error); }).catch(console.error);
-    });
+    const hasInventoryItem = items.some(item => (item as any).isInventory);
+    if (hasInventoryItem) {
+      items.forEach((item, idx) => {
+        if (!(item as any).isInventory) return;
+        const skuBase = commonData.sku_manual && commonData.sku_manual.trim() !== '' && !commonData.sku_manual.toLowerCase().includes('identificador')
+          ? commonData.sku_manual.trim() : `TSG-${Date.now()}`;
+        const sku = `${skuBase}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+        fetch('/api/inventario-estatico', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sku, id_stock: sku, nombre: item.name, marca: item.brand,
+            talla: item.size, categoria: item.category, imageUrl: item.imageUrl,
+            notes: commonData.internal_notes,
+            fecha_compra_usa: commonData.fecha_compra || new Date().toISOString().split('T')[0],
+            numero_guia: item.numero_guia || '',
+            evidencia_link: item.imageUrl || '',
+          })
+        }).then(r => r.json()).then(d => { if (!d.success) console.error('[INVENTARIO] Error:', d.error); }).catch(console.error);
+      });
+    }
 
-    const nonInventoryItems = finalProducts.filter((_, i) => !(items[i] as any)?.isInventory);
-    if (nonInventoryItems.length > 0) {
-      onSave(product ? nonInventoryItems[0] : nonInventoryItems);
+    if (finalProducts.length > 0) {
+      onSave(product ? finalProducts[0] : finalProducts);
     } else {
       onSave([]);
     }

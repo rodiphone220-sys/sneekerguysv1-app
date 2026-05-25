@@ -72,3 +72,42 @@ export async function POST(request: Request) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function GET() {
+  try {
+    const auth = getAuthClient();
+    if (!auth) {
+      return Response.json({ error: 'Credenciales de Google Sheets no configuradas' }, { status: 400 });
+    }
+
+    const sheets = google.sheets('v4');
+    const res = await withRetry(() =>
+      sheets.spreadsheets.values.get({
+        auth,
+        spreadsheetId: SHEET_ID,
+        range: "'INVENTARIO_ESTÁTICO'!A2:N",
+      })
+    );
+
+    const rows = res.data.values || [];
+    const items = rows.map((row: any[], i: number) => ({
+      id: `INV-${i}`,
+      sku: row[1] || `INV-${Date.now()}-${i}`,
+      name: (row[4] || '').replace('Artículo de prueba', '').trim() || 'Artículo en Stock',
+      buyPriceUsd: Number(row[2]) || 0,
+      buyPriceMxn: 0,
+      quantity: 1,
+      currentStatus: 'COMPRADO',
+      clientName: '',
+      isInventory: true,
+      fecha_registro: row[2] || '',
+      imageUrl: row[13] || '',
+    }));
+
+    return Response.json({ items, total: items.length });
+
+  } catch (error: any) {
+    console.error('[GET INVENTARIO] ERROR:', error.message);
+    return Response.json({ items: [], total: 0 });
+  }
+}
