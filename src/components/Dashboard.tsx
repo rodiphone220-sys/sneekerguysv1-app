@@ -142,6 +142,7 @@ export function Dashboard({ products, onNavigate, inventoryCount = 0 }: Dashboar
           color="text-blue-600"
           delay={0.15}
           subtitle="artículos en inventario"
+          onClick={() => onNavigate('stock')}
         />
         <StatCard 
           title="Stock Bajo"
