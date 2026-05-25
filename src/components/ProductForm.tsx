@@ -165,6 +165,7 @@ export function ProductForm({
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
   const [globalMarkup, setGlobalMarkup] = useState(initialGlobalMarkup);
   const [showOCRModal, setShowOCRModal] = useState(false);
+  const [ocrEnabled, setOcrEnabled] = useState(() => localStorage.getItem('ocr_enabled') === 'true');
   const [modalImageUrl, setModalImageUrl] = useState('');
   const [ocrModalData, setOcrModalData] = useState<{
     category: string; brand: string; name: string; gender: string; color_description: string; size: string; buyPriceUsd: number; moneda_compra: 'USD' | 'MXN'
@@ -209,7 +210,12 @@ export function ProductForm({
     }
   }, [globalMarkup]);
 
+  React.useEffect(() => {
+    localStorage.setItem('ocr_enabled', String(ocrEnabled));
+  }, [ocrEnabled]);
+
   const scanImageWithAI = async (base64Image: string) => {
+    if (!ocrEnabled) return;
     const env = getRuntimeEnv();
     const hasAI = process.env.NEXT_PUBLIC_GROQ_API_KEY || env.GROQ_API_KEY || process.env.NEXT_PUBLIC_OLLAMA_URL;
     if (!hasAI) { console.error("Missing AI configuration"); return; }
@@ -669,12 +675,20 @@ export function ProductForm({
                     )}
                   </div>
 
-                  <button type="button" disabled={isUploading} onClick={() => { if (currentItem.imageUrl) scanImageWithAI(currentItem.imageUrl); }}
-                    className={cn("w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black text-[11px] uppercase tracking-[0.2em] transition-all border-2",
-                      isUploading ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed" : "bg-gradient-to-br from-brand-accent to-blue-600 border-brand-accent/20 text-white shadow-xl hover:scale-[1.02] active:scale-98")}>
-                    {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                    {isUploading ? 'Escaneando con IA...' : 'Lector OCR / Inteligencia Artificial'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button type="button" disabled={isUploading || !ocrEnabled} onClick={() => { if (currentItem.imageUrl) scanImageWithAI(currentItem.imageUrl); }}
+                      className={cn("flex-1 py-4 rounded-2xl flex items-center justify-center gap-3 font-black text-[11px] uppercase tracking-[0.2em] transition-all border-2",
+                        isUploading || !ocrEnabled ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed" : "bg-gradient-to-br from-brand-accent to-blue-600 border-brand-accent/20 text-white shadow-xl hover:scale-[1.02] active:scale-98")}>
+                      {isUploading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                      {isUploading ? 'Escaneando con IA...' : (!ocrEnabled ? 'OCR Desactivado' : 'Lector OCR / Inteligencia Artificial')}
+                    </button>
+                    <button type="button" onClick={() => setOcrEnabled(!ocrEnabled)}
+                      className={cn("shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all border-2 text-[10px] font-bold uppercase tracking-wider",
+                        ocrEnabled ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700")}
+                      title={ocrEnabled ? 'Desactivar OCR' : 'Activar OCR'}>
+                      {ocrEnabled ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
 
                   <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
                     <div className="flex items-center gap-2 mb-2 text-brand-ink"><Clipboard size={14} /><span className="text-[10px] font-bold uppercase tracking-wider">Tip de Usuario Master</span></div>
