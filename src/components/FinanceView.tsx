@@ -615,7 +615,12 @@ export function FinanceView({ products, globalMarkup = 35, onUpdateMarkup, perso
           const fmtUsd = (val: number) => val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
           const fmtDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-MX') : '-';
           
-          const getGroupKey = (p: any) => `${p.createdAt?.split('T')[0] || 'unknown'}_${p.payment_card || 'sin-tarjeta'}`;
+          const getGroupKey = (p: any) => {
+            const sku = p.sku || p.id || '';
+            const lastDash = sku.lastIndexOf('-');
+            const batchId = lastDash > 0 ? sku.substring(0, lastDash) : sku;
+            return batchId || `${p.createdAt?.split('T')[0] || 'unknown'}_${p.payment_card || 'sin-tarjeta'}`;
+          };
           
           const groups = consolidatedView
             ? Object.entries(

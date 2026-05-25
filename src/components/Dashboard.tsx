@@ -24,6 +24,7 @@ interface DashboardProps {
 
 const STATUS_COLORS: Record<string, string> = {
   'Comprado en USA': '#3B82F6',
+  'Comprado en México': '#22C55E',
   'En Ruta a Zafi': '#06B6D4',
   'Recibido en Zafi': '#F97316',
   'Enviado a México': '#8B5CF6',
@@ -31,7 +32,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  'Comprado en USA': '📦 Comprado USA',
+  'Comprado en USA': '🇺🇸 Comprado USA',
+  'Comprado en México': '🇲🇽 Comprado MX',
   'En Ruta a Zafi': '✈️ En Ruta',
   'Recibido en Zafi': '📍 En Zafi',
   'Enviado a México': '🚚 Enviado MX',
@@ -53,6 +55,7 @@ export function Dashboard({ products, onNavigate }: DashboardProps) {
       totalValueMxn: products.reduce((acc, p) => acc + ((Number(p.buyPriceMxn) || 0) * (Number(p.quantity) || 1)), 0),
       statusCounts: {
         'Comprado en USA': 0,
+        'Comprado en México': 0,
         'En Ruta a Zafi': 0,
         'Recibido en Zafi': 0,
         'Enviado a México': 0,

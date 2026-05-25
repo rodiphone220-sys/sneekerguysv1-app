@@ -75,6 +75,7 @@ export function getProxyImageUrl(url: string | undefined): string {
 // =====================================================
 export const STATUS_LOGISTICS_MAP: Record<string, string> = {
   'COMPRADO': 'Comprado en USA',
+  'COMPRADO_MX': 'Comprado en México',
   'EN_RUTA': 'En Ruta a Zafi',
   'EN_BODEGA': 'Recibido en Zafi',
   'ENVIADO': 'Enviado a México',
@@ -83,6 +84,7 @@ export const STATUS_LOGISTICS_MAP: Record<string, string> = {
 
 export const STATUS_LOGISTICS_REVERSE: Record<string, string> = {
   'Comprado en USA': 'COMPRADO',
+  'Comprado en México': 'COMPRADO_MX',
   'En Ruta a Zafi': 'EN_RUTA',
   'Recibido en Zafi': 'EN_BODEGA',
   'Enviado a México': 'ENVIADO',

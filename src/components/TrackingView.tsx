@@ -9,7 +9,8 @@ interface TrackingViewProps {
 }
 
 const STEPS: { status: OrderStatus; label: string; icon: React.ReactNode; description: string }[] = [
-  { status: 'COMPRADO', label: 'Comprado', icon: <Smartphone size={16} />, description: 'Artículo adquirido en boutique/tienda USA.' },
+  { status: 'COMPRADO', label: 'Comprado USA', icon: <Smartphone size={16} />, description: 'Artículo adquirido en boutique/tienda USA.' },
+  { status: 'COMPRADO_MX', label: 'Comprado MX', icon: <Smartphone size={16} />, description: 'Artículo adquirido en tienda México.' },
   { status: 'EN_RUTA', label: 'En Ruta', icon: <Truck size={16} />, description: 'En tránsito hacia nuestro centro de logística en El Paso.' },
   { status: 'EN_BODEGA', label: 'Recibido', icon: <Building2 size={16} />, description: 'Procesado y verificado en Warehouse Zafi.' },
   { status: 'ENVIADO', label: 'Enviado', icon: <Package size={16} />, description: 'En camino a tu dirección en México.' },

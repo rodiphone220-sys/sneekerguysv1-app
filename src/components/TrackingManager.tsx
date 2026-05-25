@@ -10,7 +10,8 @@ interface TrackingManagerProps {
 }
 
 const TEMPLATES: Record<OrderStatus, string> = {
-  'COMPRADO': '¡Hola! 📦 Tu artículo {name} ha sido adquirido con éxito en tienda USA. Te notificaremos cuando llegue a nuestro centro de logística.',
+  'COMPRADO': '¡Hola! 🇺🇸 Tu artículo {name} ha sido adquirido con éxito en tienda USA. Te notificaremos cuando llegue a nuestro centro de logística.',
+  'COMPRADO_MX': '¡Hola! 🇲🇽 Tu artículo {name} ha sido adquirido con éxito en México. Te notificaremos cuando llegue a nuestro centro de logística.',
   'EN_RUTA': '¡Hola! ✈️ Tu pedido {name} ya está en tránsito hacia nuestro centro en El Paso. Próximo paso: Verificación en Warehouse.',
   'EN_BODEGA': '¡Hola! 📍 Hemos recibido y verificado tu {name} en Warehouse Zafi. Todo está listo para su envío a México.',
   'ENVIADO': '¡Hola! 🚚 ¡Buenas noticias! Tu {name} ha sido enviado a tu dirección en México. SKU de rastreo interno: {sku}.',

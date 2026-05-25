@@ -26,11 +26,12 @@ const mapProductToRow = (product: any): any[] => {
 
   // STATUS_LOGISTICS_MAP
   const STATUS_LOGISTICS_MAP: Record<string, string> = {
-    'COMPRADO': 'Comprado en USA',
-    'EN_RUTA': 'En Ruta a Zafi',
-    'EN_BODEGA': 'Recibido en Zafi',
-    'ENVIADO': 'Enviado a México',
-    'ENTREGADO': 'Entregado',
+  'COMPRADO': 'Comprado en USA',
+  'COMPRADO_MX': 'Comprado en México',
+  'EN_RUTA': 'En Ruta a Zafi',
+  'EN_BODEGA': 'Recibido en Zafi',
+  'ENVIADO': 'Enviado a México',
+  'ENTREGADO': 'Entregado',
   };
 
   // UBICACION_ACTUAL automática según status

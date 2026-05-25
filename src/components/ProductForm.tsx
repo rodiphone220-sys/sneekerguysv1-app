@@ -5,7 +5,7 @@ import {
   X, Upload, Plus, Trash2, ChevronRight, Search, Calculator,
   CreditCard, DollarSign, Tag, Clock, CheckCircle2, Building2,
   MapPin, AlertCircle, Image as ImageIcon, Sparkles, Clipboard,
-  Loader2, ListFilter, ShoppingBag, TrendingUp, Info, User, Phone, Mail, CalendarDays
+  Loader2, ListFilter, ShoppingBag, TrendingUp, Info, User, Phone, Mail, CalendarDays, Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, Customer } from '../types';
@@ -38,7 +38,7 @@ const CATEGORIES = [
   'OTROS',
 ];
 const GENDERS = ['HOMBRE', 'MUJER', 'UNISEX', 'KIDS'];
-const LOGISTICS_STATUS = ['Comprado en USA', 'En Ruta a Zafi', 'Recibido en Zafi', 'Enviado a México', 'Entregado'];
+const LOGISTICS_STATUS = ['Comprado en USA', 'Comprado en México', 'En Ruta a Zafi', 'Recibido en Zafi', 'Enviado a México', 'Entregado'];
 const CARD_TYPES = ['AMEX AZUL', 'AMEX ALEX', 'SANTANDER', 'INVEX', 'NU'];
 
 const getRuntimeEnv = () => (window as any).__ENV__ || {};
@@ -153,10 +153,11 @@ export function ProductForm({
     fecha_compra: todayStr,
   });
 
+  const initialDefaultStatus = commonData.moneda_compra === 'MXN' ? 'Comprado en México' : 'Comprado en USA';
   const [items, setItems] = useState<any[]>(product ? [product] : [{
     id: Date.now(), name: '', brand: '', category: 'CALZADO DE DISEÑADOR - HOMBRE', gender: 'UNISEX',
     color_description: '', size: '', buyPriceUsd: 0, buyPriceMxn: 0, sellPriceMxn: 0,
-    quantity: 1, imageUrl: '', currentStatus: 'Comprado en USA', isShowcase: true,
+    quantity: 1, imageUrl: '', currentStatus: initialDefaultStatus, isShowcase: true,
     clientName: '', clientEmail: '', clientPhone: '', clientAddress: '', clientIg: '',
     ciudad_estado: '', referido_por: '', metodo_pago_cliente: 'Efectivo/Transferencia', tags: []
   }]);
@@ -216,6 +217,12 @@ export function ProductForm({
   React.useEffect(() => {
     localStorage.setItem('ocr_enabled', String(ocrEnabled));
   }, [ocrEnabled]);
+
+  React.useEffect(() => {
+    if (product) return;
+    const newStatus = commonData.moneda_compra === 'MXN' ? 'Comprado en México' : 'Comprado en USA';
+    setItems(prev => prev.map((item, i) => i === activeItemIndex ? { ...item, currentStatus: newStatus } : item));
+  }, [commonData.moneda_compra, activeItemIndex]);
 
   const scanImageWithAI = async (base64Image: string) => {
     if (!ocrEnabled) return;
@@ -329,6 +336,7 @@ export function ProductForm({
   const getUbicacionByStatus = (status: string): string => {
     const map: Record<string, string> = {
       'Comprado en USA': 'Bodega USA',
+      'Comprado en México': 'Comprado en México',
       'En Ruta a Zafi': 'En tránsito a Zafi',
       'Recibido en Zafi': 'Zafi Monterrey',
       'Enviado a México': 'En ruta a México',
@@ -421,7 +429,29 @@ export function ProductForm({
       columns: 'A-AC (29 cols)', ubicacion: first?.ubicacion_actual
     });
 
-    onSave(payload);
+    const inventoryItems = items.map((item, idx) => ({ item, final: finalProducts[idx] })).filter(({ item }) => (item as any).isInventory);
+    inventoryItems.forEach(({ item }) => {
+      const skuBase = commonData.sku_manual && commonData.sku_manual.trim() !== '' && !commonData.sku_manual.toLowerCase().includes('identificador')
+        ? commonData.sku_manual.trim() : `TSG-${Date.now()}`;
+      const sku = `${skuBase}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+      fetch('/api/inventario-estatico', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sku, id_stock: sku, nombre: item.name, marca: item.brand,
+          talla: item.size, categoria: item.category, imageUrl: item.imageUrl,
+          notes: commonData.internal_notes,
+          fecha_compra_usa: commonData.fecha_compra || new Date().toISOString().split('T')[0],
+        })
+      }).then(r => r.json()).then(d => { if (!d.success) console.error('[INVENTARIO] Error:', d.error); }).catch(console.error);
+    });
+
+    const nonInventoryItems = finalProducts.filter((_, i) => !(items[i] as any)?.isInventory);
+    if (nonInventoryItems.length > 0) {
+      onSave(product ? nonInventoryItems[0] : nonInventoryItems);
+    } else {
+      onSave([]);
+    }
   };
 
   // ✅ selectCustomer - Casting seguro para evitar errores TS
@@ -777,6 +807,7 @@ export function ProductForm({
                       <div className="flex gap-2">
                         <button type="button" onClick={() => setShowNewCustomerModal(true)} className="text-[10px] font-bold text-white bg-brand-accent border border-brand-accent px-4 py-2 rounded-xl hover:bg-brand-accent/90 transition-all flex items-center gap-2 shadow-sm"><User size={14} /> Nuevo Cliente</button>
                         <button type="button" onClick={() => setShowCustomerSearch(!showCustomerSearch)} className="text-[10px] font-bold text-brand-ink bg-[#F8FAF9] border border-brand-border px-4 py-2 rounded-xl hover:bg-brand-ink hover:text-white transition-all flex items-center gap-2 shadow-sm"><Search size={14} /> {showCustomerSearch ? 'Cerrar' : 'Buscar'}</button>
+                        <button type="button" onClick={() => updateItem(activeItemIndex, { clientName: '', clientEmail: '', clientPhone: '', clientIg: '', ciudad_estado: '', referido_por: '', isInventory: !currentItem.isInventory })} className={cn("text-[10px] font-bold px-4 py-2 rounded-xl transition-all flex items-center gap-2 shadow-sm border", currentItem.isInventory ? "bg-amber-500 text-white border-amber-500" : "bg-gray-100 text-gray-600 border-gray-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200")}><Package size={14} /> STOCK</button>
                       </div>
                     </div>
 
@@ -800,7 +831,7 @@ export function ProductForm({
                       </div>
                     )}
 
-                    {currentItem.clientName && !showCustomerSearch && (
+                    {currentItem.clientName && !showCustomerSearch && !currentItem.isInventory && (
                       <div className="flex items-center justify-between p-4 bg-[#F8FAF9] border border-brand-border rounded-xl">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-brand-ink text-white flex items-center justify-center text-[10px] font-black">{currentItem.clientName.charAt(0).toUpperCase()}</div>
@@ -813,6 +844,20 @@ export function ProductForm({
                         </div>
                         <button type="button" onClick={() => updateItem(activeItemIndex, { clientName: '', clientEmail: '', clientPhone: '', clientAddress: '', clientIg: '', ciudad_estado: '', referido_por: '' })}
                           className="text-red-500 hover:scale-110 transition-transform"><Trash2 size={14} /></button>
+                      </div>
+                    )}
+
+                    {currentItem.isInventory && !showCustomerSearch && (
+                      <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black"><Package size={14} /></div>
+                          <div>
+                            <div className="text-xs font-bold text-amber-700">STOCK</div>
+                            <div className="text-[10px] text-amber-500">Este artículo se registrará en INVENTARIO_ESTÁTICO</div>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => updateItem(activeItemIndex, { isInventory: false })}
+                          className="text-amber-500 hover:scale-110 transition-transform"><Trash2 size={14} /></button>
                       </div>
                     )}
                   </div>

@@ -9,7 +9,8 @@ interface StatusPipelineProps {
 }
 
 const steps: { key: OrderStatus; label: string; icon: React.ReactNode }[] = [
-  { key: 'COMPRADO', label: 'Comprado', icon: <Package size={16} /> },
+  { key: 'COMPRADO', label: 'Comprado USA', icon: <Package size={16} /> },
+  { key: 'COMPRADO_MX', label: 'Comprado MX', icon: <Package size={16} /> },
   { key: 'EN_RUTA', label: 'En Ruta', icon: <Truck size={16} /> },
   { key: 'EN_BODEGA', label: 'Bodega', icon: <Warehouse size={16} /> },
   { key: 'ENVIADO', label: 'Enviado', icon: <Send size={16} /> },

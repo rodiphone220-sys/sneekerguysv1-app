@@ -25,6 +25,7 @@ const getAuthClient = () => {
 
 const STATUS_LOGISTICS_MAP: Record<string, string> = {
   'COMPRADO': 'Comprado en USA',
+  'COMPRADO_MX': 'Comprado en México',
   'EN_RUTA': 'En Ruta a Zafi',
   'EN_BODEGA': 'Recibido en Zafi',
   'ENVIADO': 'Enviado a México',
@@ -33,6 +34,7 @@ const STATUS_LOGISTICS_MAP: Record<string, string> = {
 
 const STATUS_LOGISTICS_REVERSE: Record<string, string> = {
   'Comprado en USA': 'COMPRADO',
+  'Comprado en México': 'COMPRADO_MX',
   'En Ruta a Zafi': 'EN_RUTA',
   'Recibido en Zafi': 'EN_BODEGA',
   'Enviado a México': 'ENVIADO',
@@ -96,7 +98,8 @@ const mapRowToProduct = (row: any[], index: number): any => {
     color_description: row[18] || '',
     imageUrl: imageLink,
     boutique: row[20] || '',
-    payment_card: row[21] || '', // V: TARJETA_PAGO
+    payment_card: row[21] || '',
+    card: row[21] || '', // V: TARJETA_PAGO (alias)
     origen_articulo: row[22] || 'USA',
     buyPriceUsd: costoUsd,
     exchangeRate: tipoCambio,

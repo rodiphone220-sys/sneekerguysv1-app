@@ -64,7 +64,8 @@ import { SystemSettings as SettingsType } from './types';
 type ActiveTab = 'dashboard' | 'all' | 'pending' | 'delivered' | 'stock' | 'zafi' | 'orders' | 'finances' | 'settings' | 'catalog' | 'messaging' | 'advisor' | 'search' | 'clientes' | 'estatus' | 'browser' | 'email';
 
 const STATUSES = [
-  { id: 'COMPRADO', label: 'Comprado en USA', icon: '📦', color: '#3B82F6' },
+  { id: 'COMPRADO', label: 'Comprado en USA', icon: '🇺🇸', color: '#3B82F6' },
+  { id: 'COMPRADO_MX', label: 'Comprado en México', icon: '🇲🇽', color: '#22C55E' },
   { id: 'EN_RUTA', label: 'En Ruta a Zafi', icon: '✈️', color: '#EAB308' },
   { id: 'EN_BODEGA', label: 'Recibido en Zafi', icon: '📍', color: '#F97316' },
   { id: 'ENVIADO', label: 'Enviado a México', icon: '🚚', color: '#A855F7' },
@@ -467,6 +468,7 @@ export default function App() {
   // =====================================================
   const STATUS_FLOW: Record<string, string[]> = {
     'COMPRADO': ['EN_RUTA'],
+    'COMPRADO_MX': ['EN_RUTA'],
     'EN_RUTA': ['EN_BODEGA'],
     'EN_BODEGA': ['ENVIADO'],
     'ENVIADO': ['ENTREGADO'],
@@ -475,6 +477,7 @@ export default function App() {
 
   const STATUS_LOGISTICS_MAP: Record<string, string> = {
     'COMPRADO': 'Comprado en USA',
+    'COMPRADO_MX': 'Comprado en México',
     'EN_RUTA': 'En Ruta a Zafi',
     'EN_BODEGA': 'Recibido en Zafi',
     'ENVIADO': 'Enviado a México',
@@ -484,6 +487,7 @@ export default function App() {
   const getLocationByStatus = (status: string): string => {
     const map: Record<string, string> = {
       'COMPRADO': 'Bodega USA',
+      'COMPRADO_MX': 'Comprado en México',
       'EN_RUTA': 'En tránsito a Zafi',
       'EN_BODEGA': 'Zafi Monterrey - Bodega',
       'ENVIADO': 'En ruta a México',
@@ -505,7 +509,7 @@ export default function App() {
   };
 
   const calculateStatusCounts = (productList: Product[]) => {
-    const counts: Record<string, number> = { COMPRADO: 0, EN_RUTA: 0, EN_BODEGA: 0, ENVIADO: 0, ENTREGADO: 0 };
+    const counts: Record<string, number> = { COMPRADO: 0, COMPRADO_MX: 0, EN_RUTA: 0, EN_BODEGA: 0, ENVIADO: 0, ENTREGADO: 0 };
     productList.forEach(p => { if (counts[p.currentStatus] !== undefined) counts[p.currentStatus]++; });
     return counts;
   };
@@ -1324,7 +1328,8 @@ export default function App() {
                       className="bg-transparent border-none outline-none font-semibold text-sm min-w-[160px] text-brand-ink"
                     >
                       <option value="ALL">Todos los Status</option>
-                      <option value="COMPRADO">📦 Comprado</option>
+                      <option value="COMPRADO">🇺🇸 Comprado USA</option>
+                      <option value="COMPRADO_MX">🇲🇽 Comprado MX</option>
                       <option value="EN_RUTA">✈️ En Ruta</option>
                       <option value="EN_BODEGA">📍 Zafi</option>
                       <option value="ENVIADO">🚚 Enviado</option>
@@ -1390,6 +1395,7 @@ export default function App() {
                                         onEdit={(p) => { setEditingProduct(p); setIsFormOpen(true); }}
                                         onStatusChange={handleStatusChange}
                                         onDelete={handleDeleteProduct}
+                                        allProducts={products}
                                       />
                                     </motion.div>
                                   ))}
@@ -1419,6 +1425,7 @@ export default function App() {
                             onEdit={(p) => { setEditingProduct(p); setIsFormOpen(true); }}
                             onStatusChange={handleStatusChange}
                             onDelete={handleDeleteProduct}
+                            allProducts={products}
                           />
                         </motion.div>
                       ))}
@@ -1507,7 +1514,8 @@ export default function App() {
                               onChange={(e) => handleStatusChange(p.id, e.target.value as OrderStatus)}
                               className="bg-transparent border-none p-0 text-xs font-bold text-brand-ink outline-none cursor-pointer hover:underline"
                             >
-                              <option value="COMPRADO">📦 Comprado</option>
+                              <option value="COMPRADO">🇺🇸 Comprado USA</option>
+                              <option value="COMPRADO_MX">🇲🇽 Comprado MX</option>
                               <option value="EN_RUTA">✈️ En Ruta</option>
                               <option value="EN_BODEGA">📍 En Zafi</option>
                               <option value="ENVIADO">🚚 Enviado</option>

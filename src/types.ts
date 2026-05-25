@@ -1,4 +1,4 @@
-export type OrderStatus = 'COMPRADO' | 'EN_RUTA' | 'EN_BODEGA' | 'ENVIADO' | 'ENTREGADO';
+export type OrderStatus = 'COMPRADO' | 'COMPRADO_MX' | 'EN_RUTA' | 'EN_BODEGA' | 'ENVIADO' | 'ENTREGADO';
 
 export interface Category {
   id: string;
