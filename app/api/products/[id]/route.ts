@@ -182,3 +182,64 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const auth = getAuthClient();
+    if (!auth) return Response.json({ error: 'Credenciales de Google Sheets no configuradas en el servidor', details: 'Configuración incompleta en producción.' }, { status: 400 });
+
+    const id = params.id;
+    const sheets = google.sheets('v4');
+
+    const getResponse = await sheets.spreadsheets.values.get({
+      auth,
+      spreadsheetId: SHEET_ID,
+      range: "'MASTER_DATA'!A2:AC"
+    });
+
+    const rows = getResponse.data.values || [];
+    let rowIndex = -1;
+
+    const candidates = [id];
+    let stripped = id.replace(/-\d+$/, '');
+    if (stripped !== id) candidates.push(stripped);
+    if (stripped !== id.replace(/-\d+-\d+$/, '')) {
+      const doubleStripped = id.replace(/-\d+-\d+$/, '');
+      if (doubleStripped !== id && doubleStripped !== stripped) candidates.push(doubleStripped);
+    }
+
+    for (const candidate of candidates) {
+      for (let i = 0; i < rows.length; i++) {
+        if (rows[i][0] === candidate) {
+          rowIndex = i + 2;
+          break;
+        }
+      }
+      if (rowIndex !== -1) break;
+    }
+
+    if (rowIndex === -1) {
+      return Response.json({ error: 'Product not found', searchedId: id }, { status: 404 });
+    }
+
+    // Logical delete: clear row, keep ID and mark status as INACTIVO
+    const emptyRow = Array(29).fill('');
+    emptyRow[0] = id;
+    emptyRow[2] = 'INACTIVO';
+
+    await sheets.spreadsheets.values.update({
+      auth,
+      spreadsheetId: SHEET_ID,
+      range: `'MASTER_DATA'!A${rowIndex}:AC${rowIndex}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [emptyRow] }
+    });
+
+    console.log(`[DELETE] ✅ Eliminado lógico - Fila: ${rowIndex}, ID: ${id}`);
+    return Response.json({ success: true, folio: id, action: 'logical_delete' });
+
+  } catch (error: any) {
+    console.error('[DELETE] ERROR:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

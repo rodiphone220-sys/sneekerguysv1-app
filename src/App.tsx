@@ -445,10 +445,21 @@ export default function App() {
     }
   };
 
-  const handleDeleteProduct = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar este artículo?')) {
-      setProducts(products.filter(p => p.id !== id));
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('¿Estás seguro de eliminar este artículo?')) return;
+    try {
+      const response = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setProducts(products.filter(p => p.id !== id));
+        setToast({ message: '✅ Artículo eliminado correctamente', type: 'success' });
+      } else {
+        const err = await response.json();
+        setToast({ message: `❌ Error al eliminar: ${err.error}`, type: 'error' });
+      }
+    } catch (error: any) {
+      setToast({ message: `❌ Error de red al eliminar: ${error.message}`, type: 'error' });
     }
+    setTimeout(() => setToast(null), 4000);
   };
 
   // =====================================================
